@@ -27,6 +27,8 @@ export function EventForm({ tripId, day, days, event, onSaved, onDeleted, onClos
   const isNew = !event;
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState('');
   const [selectedDayId, setSelectedDayId] = useState(day.id);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -70,6 +72,9 @@ export function EventForm({ tripId, day, days, event, onSaved, onDeleted, onClos
     if (res.ok) {
       const saved = await res.json();
       onSaved(saved, isNew);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Something went wrong. Please try again.');
     }
     setLoading(false);
   }
@@ -78,7 +83,12 @@ export function EventForm({ tripId, day, days, event, onSaved, onDeleted, onClos
     if (!event) return;
     setDeleting(true);
     const res = await fetch(`/api/trips/${tripId}/events/${event.id}`, { method: 'DELETE' });
-    if (res.ok) onDeleted(event.id);
+    if (res.ok) {
+      onDeleted(event.id);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Failed to delete. Please try again.');
+    }
     setDeleting(false);
   }
 
@@ -221,15 +231,25 @@ export function EventForm({ tripId, day, days, event, onSaved, onDeleted, onClos
             <Textarea id="notes" name="notes" defaultValue={event?.notes ?? ''} rows={3} placeholder="Any additional details…" />
           </div>
 
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <div className="flex justify-between pt-2">
             {!isNew ? (
-              <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Deleting…' : 'Delete'}
-              </Button>
+              !confirmDelete ? (
+                <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>Delete</Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-red-600">Delete this event?</span>
+                  <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+                    {deleting ? 'Deleting…' : 'Yes, delete'}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+                </div>
+              )
             ) : <div />}
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-              <Button type="submit" disabled={loading}>{loading ? 'Saving…' : 'Save'}</Button>
+              <Button type="submit" disabled={loading}>{loading ? 'Saving…' : 'Save Event'}</Button>
             </div>
           </div>
         </form>

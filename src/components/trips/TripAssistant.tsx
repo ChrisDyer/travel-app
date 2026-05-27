@@ -33,6 +33,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
   const [text, setText] = useState('');
   const [cards, setCards] = useState<ProposalCard[]>([]);
   const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState('');
   const [gmailNeeded, setGmailNeeded] = useState(false);
   const [history, setHistory] = useState<HistoryTurn[]>([]);
 
@@ -181,18 +182,25 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
     if (selected.length === 0) return;
 
     setApplying(true);
+    setApplyError('');
     try {
       const res = await fetch(`/api/trips/${tripId}/assistant/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ proposals: selected }),
       });
-      if (!res.ok) throw new Error('Apply failed');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setApplyError(data.error ?? 'Failed to add items. Please try again.');
+        return;
+      }
       const result = await res.json() as { addedEvents: TripEvent[]; addedFlights: TripFlight[]; addedHotels: TripHotel[] };
       if (result.addedEvents.length) onEventsAdded(result.addedEvents);
       if (result.addedFlights.length) onFlightsAdded(result.addedFlights);
       if (result.addedHotels.length) onHotelsAdded(result.addedHotels);
       setCards((prev) => prev.filter((c) => !c.checked));
+    } catch {
+      setApplyError('Connection error. Please try again.');
     } finally {
       setApplying(false);
     }
@@ -353,7 +361,8 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
                   />
                 ))}
 
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
+                  {applyError && <p className="text-sm text-red-600">{applyError}</p>}
                   <Button
                     onClick={applySelected}
                     disabled={applying || cards.filter((c) => c.checked).length === 0}

@@ -45,5 +45,8 @@ local.db
 local.db-shm
 local.db-wal
 
+# user-uploaded cover photos (created at runtime, persisted on server)
+public/trip-photos/
+
 # claude code
 .claude/

@@ -24,18 +24,32 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState('');
   const [travelMode, setTravelMode] = useState<'fly' | 'drive'>(trip.travelMode ?? 'fly');
-  const [rentalCarNeeded, setRentalCarNeeded] = useState(trip.rentalCarNeeded ?? false);
+  const [rentalCarNeeded, setRentalCarNeeded] = useState(!!trip.rentalCarNeeded);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
+    setError('');
     const form = new FormData(e.currentTarget);
+
+    const startDate = form.get('startDate') as string;
+    const endDate = form.get('endDate') as string;
+    if (startDate && endDate && endDate < startDate) {
+      setError('End date must be on or after start date.');
+      return;
+    }
+    if (startDate && endDate && endDate < trip.endDate) {
+      const proceed = window.confirm('Shortening the trip will remove days from the end. Events on removed days will be hidden. Continue?');
+      if (!proceed) return;
+    }
+
+    setLoading(true);
     const body = {
       title: form.get('title'),
       destination: form.get('destination'),
-      startDate: form.get('startDate'),
-      endDate: form.get('endDate'),
+      startDate,
+      endDate,
       status: form.get('status'),
       travelMode,
       rentalCarNeeded,
@@ -49,6 +63,9 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
     if (res.ok) {
       const saved = await res.json();
       onSaved(saved);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Something went wrong. Please try again.');
     }
     setLoading(false);
   }
@@ -142,6 +159,8 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
             currentUrl={trip.coverImageUrl}
             onChanged={(url) => onSaved({ ...trip, coverImageUrl: url })}
           />
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex justify-between pt-2">
             {!confirmDelete ? (

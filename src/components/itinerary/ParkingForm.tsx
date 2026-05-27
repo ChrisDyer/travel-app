@@ -24,6 +24,8 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
   const isNew = !parking;
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,9 +37,9 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
       address: form.get('address') || null,
       level: form.get('level') || null,
       startDate: form.get('startDate') || null,
-      startTime: form.get('startTime') || null,
+      startTime: (form.get('startTime') as string || '').replace(/^00:00$/, '') || null,
       endDate: form.get('endDate') || null,
-      endTime: form.get('endTime') || null,
+      endTime: (form.get('endTime') as string || '').replace(/^00:00$/, '') || null,
       confirmationNumber: form.get('confirmationNumber') || null,
       orderNumber: form.get('orderNumber') || null,
       vendor: form.get('vendor') || null,
@@ -56,6 +58,9 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
     if (res.ok) {
       const saved = await res.json();
       onSaved(saved, isNew);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Something went wrong. Please try again.');
     }
     setLoading(false);
   }
@@ -103,7 +108,7 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="startTime">Time</Label>
-                <Input id="startTime" name="startTime" type="time" defaultValue={parking?.startTime ?? ''} />
+                <Input id="startTime" name="startTime" type="time" defaultValue={parking?.startTime === '00:00' ? '' : (parking?.startTime ?? '')} />
               </div>
             </div>
           </div>
@@ -117,7 +122,7 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="endTime">Time</Label>
-                <Input id="endTime" name="endTime" type="time" defaultValue={parking?.endTime ?? ''} />
+                <Input id="endTime" name="endTime" type="time" defaultValue={parking?.endTime === '00:00' ? '' : (parking?.endTime ?? '')} />
               </div>
             </div>
           </div>
@@ -154,7 +159,7 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
               <Label htmlFor="cost">Cost</Label>
               <div className="flex gap-2">
                 <Input id="cost" name="cost" type="number" step="0.01" defaultValue={parking?.cost ?? ''} placeholder="0.00" />
-                <Input name="currency" defaultValue={parking?.currency ?? 'USD'} className="w-20" />
+                <Input name="currency" aria-label="Currency" defaultValue={parking?.currency ?? 'USD'} className="w-20" />
               </div>
             </div>
           </div>
@@ -164,11 +169,21 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
             <Textarea id="notes" name="notes" defaultValue={parking?.notes ?? ''} rows={2} placeholder="Any additional details…" />
           </div>
 
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <div className="flex justify-between pt-2">
             {!isNew ? (
-              <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Deleting…' : 'Delete'}
-              </Button>
+              !confirmDelete ? (
+                <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>Delete</Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-red-600">Delete this parking?</span>
+                  <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+                    {deleting ? 'Deleting…' : 'Yes, delete'}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+                </div>
+              )
             ) : <div />}
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

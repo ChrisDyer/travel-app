@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef } from 'react';
 import { TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar } from '@/types/travel';
 import { EventCard } from './EventCard';
 import { BrandLogo } from './BrandLogo';
@@ -16,6 +17,7 @@ interface DaySectionProps {
   dayRentalCars: { rentalCar: TripRentalCar; role: 'pickup' | 'dropoff' }[];
   isSelected?: boolean;
   onSelectDay?: (day: TripDay) => void;
+  onDayTitleChanged?: (dayId: string, title: string | null) => void;
   onAddEvent: (day: TripDay) => void;
   onEditEvent: (event: TripEvent) => void;
   onEditFlight: (flight: TripFlight) => void;
@@ -47,8 +49,23 @@ type TimelineItem =
   | { kind: 'parking'; time: string | null; parking: TripParking; role: 'dropoff' | 'pickup' }
   | { kind: 'rentalCar'; time: string | null; rentalCar: TripRentalCar; role: 'pickup' | 'dropoff' };
 
-export function DaySection({ day, events, dayFlights, dayHotels, dayParking, dayRentalCars, isSelected, onSelectDay, onAddEvent, onEditEvent, onEditFlight, onEditHotel, onEditParking, onEditRentalCar }: DaySectionProps) {
+export function DaySection({ day, events, dayFlights, dayHotels, dayParking, dayRentalCars, isSelected, onSelectDay, onDayTitleChanged, onAddEvent, onEditEvent, onEditFlight, onEditHotel, onEditParking, onEditRentalCar }: DaySectionProps) {
   const { weekday, date } = formatDate(day.date);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(day.title ?? '');
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  async function saveTitle() {
+    setEditingTitle(false);
+    const newTitle = titleDraft.trim() || null;
+    if (newTitle === (day.title ?? null)) return;
+    await fetch(`/api/trips/${day.tripId ?? ''}/days/${day.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newTitle }),
+    });
+    onDayTitleChanged?.(day.id, newTitle);
+  }
 
   // Build a unified timeline sorted by time
   const items: TimelineItem[] = [
@@ -67,12 +84,10 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
       hotel,
       role,
     })),
-    ...dayParking.map(({ parking, role }) => ({
-      kind: 'parking' as const,
-      time: role === 'dropoff' ? parking.startTime : parking.endTime,
-      parking,
-      role,
-    })),
+    ...dayParking.map(({ parking, role }) => {
+      const raw = role === 'dropoff' ? parking.startTime : parking.endTime;
+      return { kind: 'parking' as const, time: raw === '00:00' ? null : raw, parking, role };
+    }),
     ...dayRentalCars.map(({ rentalCar, role }) => ({
       kind: 'rentalCar' as const,
       time: role === 'pickup' ? rentalCar.pickupTime : rentalCar.dropoffTime,
@@ -89,16 +104,34 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
   return (
     <div className="day-section">
       <div className="flex items-baseline gap-3 mb-4">
-        <button
-          type="button"
+        <div
           onClick={() => onSelectDay?.(day)}
-          className={`text-left transition-all rounded-lg px-3 py-1.5 -mx-3 -my-1.5 hover:bg-stone-100 ${isSelected ? 'border-l-4 border-blue-500 pl-2' : ''}`}
+          className={`text-left transition-all rounded-lg px-3 py-1.5 -mx-3 -my-1.5 hover:bg-stone-100 cursor-pointer ${isSelected ? 'border-l-4 border-blue-500 pl-2' : ''}`}
         >
           <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">Day {day.dayNumber}</span>
           <h2 className="text-2xl font-serif font-bold text-stone-900">{weekday}</h2>
           <p className="text-stone-500 text-sm">{date}</p>
-          {day.title && <p className="text-stone-600 font-medium mt-0.5">{day.title}</p>}
-        </button>
+          {editingTitle ? (
+            <input
+              ref={titleInputRef}
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveTitle(); } if (e.key === 'Escape') { setTitleDraft(day.title ?? ''); setEditingTitle(false); } }}
+              className="mt-0.5 text-stone-600 font-medium text-sm bg-transparent border-b border-stone-400 focus:outline-none w-full max-w-xs"
+              placeholder="Add a day title…"
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setEditingTitle(true); setTimeout(() => titleInputRef.current?.focus(), 0); }}
+              className="no-print mt-0.5 text-left text-sm text-stone-500 hover:text-stone-700 transition-colors"
+            >
+              {day.title ? <span className="font-medium text-stone-600">{day.title}</span> : <span className="text-stone-400 italic">+ Add day title</span>}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Timeline */}

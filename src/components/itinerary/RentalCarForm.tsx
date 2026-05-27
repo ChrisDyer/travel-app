@@ -24,6 +24,8 @@ export function RentalCarForm({ tripId, rentalCar, onSaved, onDeleted, onClose }
   const isNew = !rentalCar;
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -57,6 +59,9 @@ export function RentalCarForm({ tripId, rentalCar, onSaved, onDeleted, onClose }
     if (res.ok) {
       const saved = await res.json();
       onSaved(saved, isNew);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Something went wrong. Please try again.');
     }
     setLoading(false);
   }
@@ -64,8 +69,13 @@ export function RentalCarForm({ tripId, rentalCar, onSaved, onDeleted, onClose }
   async function handleDelete() {
     if (!rentalCar) return;
     setDeleting(true);
-    await fetch(`/api/trips/${tripId}/rental-cars/${rentalCar.id}`, { method: 'DELETE' });
-    onDeleted(rentalCar.id);
+    const res = await fetch(`/api/trips/${tripId}/rental-cars/${rentalCar.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      onDeleted(rentalCar.id);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Failed to delete. Please try again.');
+    }
     setDeleting(false);
   }
 
@@ -158,7 +168,7 @@ export function RentalCarForm({ tripId, rentalCar, onSaved, onDeleted, onClose }
               <Label htmlFor="cost">Cost</Label>
               <div className="flex gap-2">
                 <Input id="cost" name="cost" type="number" step="0.01" defaultValue={rentalCar?.cost ?? ''} placeholder="0.00" />
-                <Input name="currency" defaultValue={rentalCar?.currency ?? 'USD'} className="w-20" />
+                <Input name="currency" aria-label="Currency" defaultValue={rentalCar?.currency ?? 'USD'} className="w-20" />
               </div>
             </div>
           </div>
@@ -168,11 +178,21 @@ export function RentalCarForm({ tripId, rentalCar, onSaved, onDeleted, onClose }
             <Textarea id="notes" name="notes" defaultValue={rentalCar?.notes ?? ''} rows={2} placeholder="Any additional details…" />
           </div>
 
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <div className="flex justify-between pt-2">
             {!isNew ? (
-              <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Deleting…' : 'Delete'}
-              </Button>
+              !confirmDelete ? (
+                <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>Delete</Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-red-600">Delete this rental car?</span>
+                  <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+                    {deleting ? 'Deleting…' : 'Yes, delete'}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+                </div>
+              )
             ) : <div />}
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

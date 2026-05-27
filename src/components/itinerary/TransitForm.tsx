@@ -33,6 +33,8 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
   const isNew = !transit;
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -66,6 +68,9 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
     if (res.ok) {
       const saved = await res.json();
       onSaved(saved, isNew);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Something went wrong. Please try again.');
     }
     setLoading(false);
   }
@@ -73,8 +78,13 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
   async function handleDelete() {
     if (!transit) return;
     setDeleting(true);
-    await fetch(`/api/trips/${tripId}/transit/${transit.id}`, { method: 'DELETE' });
-    onDeleted(transit.id);
+    const res = await fetch(`/api/trips/${tripId}/transit/${transit.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      onDeleted(transit.id);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Failed to delete. Please try again.');
+    }
     setDeleting(false);
   }
 
@@ -177,7 +187,7 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
               <Label htmlFor="cost">Cost</Label>
               <div className="flex gap-2">
                 <Input id="cost" name="cost" type="number" step="0.01" defaultValue={transit?.cost ?? ''} placeholder="0.00" />
-                <Input name="currency" defaultValue={transit?.currency ?? 'USD'} className="w-20" />
+                <Input name="currency" aria-label="Currency" defaultValue={transit?.currency ?? 'USD'} className="w-20" />
               </div>
             </div>
           </div>
@@ -187,11 +197,21 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
             <Textarea id="notes" name="notes" defaultValue={transit?.notes ?? ''} rows={2} placeholder="Any additional details…" />
           </div>
 
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <div className="flex justify-between pt-2">
             {!isNew ? (
-              <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Deleting…' : 'Delete'}
-              </Button>
+              !confirmDelete ? (
+                <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>Delete</Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-red-600">Delete this transit?</span>
+                  <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+                    {deleting ? 'Deleting…' : 'Yes, delete'}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+                </div>
+              )
             ) : <div />}
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

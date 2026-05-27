@@ -12,6 +12,7 @@ import { HotelForm } from './HotelForm';
 import { ParkingForm } from './ParkingForm';
 import { RentalCarForm } from './RentalCarForm';
 import { PackingChecklist } from './PackingChecklist';
+import { TripCostSummary } from './TripCostSummary';
 import { TripAssistant } from '@/components/trips/TripAssistant';
 
 interface ItineraryDocumentProps {
@@ -27,6 +28,7 @@ interface ItineraryDocumentProps {
 }
 
 export function ItineraryDocument({ trip, initialDays, initialEvents, initialFlights, initialHotels, initialParking, initialRentalCars, initialTransit, initialPackingItems }: ItineraryDocumentProps) {
+  const [days, setDays] = useState<TripDay[]>(initialDays);
   const [events, setEvents] = useState<TripEvent[]>(initialEvents);
   const [flights, setFlights] = useState<TripFlight[]>(initialFlights);
   const [hotels, setHotels] = useState<TripHotel[]>(initialHotels);
@@ -39,6 +41,10 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
   const [editingParking, setEditingParking] = useState<TripParking | null>(null);
   const [editingRentalCar, setEditingRentalCar] = useState<TripRentalCar | null>(null);
   const [selectedDay, setSelectedDay] = useState<TripDay | null>(null);
+
+  function handleDayTitleChanged(dayId: string, title: string | null) {
+    setDays((prev) => prev.map((d) => d.id === dayId ? { ...d, title } : d));
+  }
 
   function handleEventSaved(event: TripEvent, isNew: boolean) {
     setEvents((prev) => isNew ? [...prev, event] : prev.map((e) => e.id === event.id ? event : e));
@@ -139,7 +145,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
         .filter((p) => p.address && !isDepartureAirportParking(p.location) && p.startDate && date >= p.startDate && date <= (p.endDate ?? p.startDate))
         .map((p) => ({ title: p.location, address: p.address!, type: 'parking' as const })),
       ...events
-        .filter((e) => e.location && initialDays.find((d) => d.id === e.tripDayId)?.date === date)
+        .filter((e) => e.location && days.find((d) => d.id === e.tripDayId)?.date === date)
         .map((e) => ({ title: e.title, address: e.location!, type: 'event' as const })),
       ...rentalCars
         .filter((c) => c.pickupLocation && c.pickupDate && date >= c.pickupDate && (!c.dropoffDate || date <= c.dropoffDate))
@@ -151,7 +157,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
     <>
       <TripAssistant
         tripId={trip.id}
-        days={initialDays}
+        days={days}
         onEventsAdded={(newEvents) => setEvents((prev) => [...prev, ...newEvents])}
         onFlightsAdded={(newFlights) => setFlights((prev) => [...prev, ...newFlights])}
         onHotelsAdded={(newHotels) => setHotels((prev) => [...prev, ...newHotels])}
@@ -191,11 +197,20 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
             parking={parking}
             transit={initialTransit}
           />
+
+          <TripCostSummary
+            events={events}
+            flights={flights}
+            hotels={hotels}
+            parking={parking}
+            rentalCars={rentalCars}
+            transit={initialTransit}
+          />
         </div>
 
         {/* Right column: daily itinerary */}
         <div className="space-y-12">
-          {initialDays.map((day) => (
+          {days.map((day) => (
             <DaySection
               key={day.id}
               day={day}
@@ -212,6 +227,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
               onEditHotel={(h) => setEditingHotel(h)}
               onEditParking={(p) => setEditingParking(p)}
               onEditRentalCar={(c) => setEditingRentalCar(c)}
+              onDayTitleChanged={handleDayTitleChanged}
             />
           ))}
         </div>
@@ -220,8 +236,8 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
       {(editingEvent || addingToDay) && (
         <EventForm
           tripId={trip.id}
-          day={addingToDay ?? (initialDays.find((d) => d.id === editingEvent!.tripDayId) ?? initialDays[0])}
-          days={initialDays}
+          day={addingToDay ?? (days.find((d) => d.id === editingEvent!.tripDayId) ?? days[0])}
+          days={days}
           event={editingEvent}
           onSaved={handleEventSaved}
           onDeleted={handleEventDeleted}

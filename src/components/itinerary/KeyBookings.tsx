@@ -285,11 +285,11 @@ export function KeyBookings({
                     </div>
                   )}
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                    {(p.startDate || p.startTime) && (
-                      <span className="text-xs text-stone-500">Drop-off: {fmtDate(p.startDate)}{p.startTime ? ` @ ${fmt12(p.startTime)}` : ''}</span>
+                    {(p.startDate || (p.startTime && p.startTime !== '00:00')) && (
+                      <span className="text-xs text-stone-500">Drop-off: {fmtDate(p.startDate)}{p.startTime && p.startTime !== '00:00' ? ` @ ${fmt12(p.startTime)}` : ''}</span>
                     )}
-                    {(p.endDate || p.endTime) && (
-                      <span className="text-xs text-stone-500">Pick-up: {fmtDate(p.endDate)}{p.endTime ? ` @ ${fmt12(p.endTime)}` : ''}</span>
+                    {(p.endDate || (p.endTime && p.endTime !== '00:00')) && (
+                      <span className="text-xs text-stone-500">Pick-up: {fmtDate(p.endDate)}{p.endTime && p.endTime !== '00:00' ? ` @ ${fmt12(p.endTime)}` : ''}</span>
                     )}
                     {p.vendor && <span className="text-xs text-stone-400">{p.vendor}</span>}
                     {p.confirmationNumber && <span className="text-xs text-stone-400">Conf: {p.confirmationNumber}</span>}
@@ -308,8 +308,8 @@ export function KeyBookings({
       </div>}
 
       {/* ── RENTAL CARS ── */}
-      {rentalCarNeeded && <SectionHeader label="Rental Car" onAdd={() => setAddingRentalCar(true)} addLabel="Rental Car" isOpen={rentalCarsOpen} onToggle={() => setRentalCarsOpen((v) => !v)} />}
-      {rentalCarNeeded && rentalCarsOpen && <div className="space-y-2">
+      {!!rentalCarNeeded && <SectionHeader label="Rental Car" onAdd={() => setAddingRentalCar(true)} addLabel="Rental Car" isOpen={rentalCarsOpen} onToggle={() => setRentalCarsOpen((v) => !v)} />}
+      {!!rentalCarNeeded && rentalCarsOpen && <div className="space-y-2">
         {rentalCars.map((c) => {
           const carLogo = getLogoPath(c.company);
           return (
@@ -409,7 +409,7 @@ export function KeyBookings({
         })),
         ...parking.map((p) => ({
           key: `pp-${p.id}`, icon: '🅿️', title: `${p.location}${p.level ? ` · ${p.level}` : ''}`,
-          sub: [p.startDate ? `Drop-off: ${fmtDate(p.startDate)}${p.startTime ? ` @ ${fmt12(p.startTime)}` : ''}` : null, p.endDate ? `Pick-up: ${fmtDate(p.endDate)}${p.endTime ? ` @ ${fmt12(p.endTime)}` : ''}` : null, p.confirmationNumber ? `Conf: ${p.confirmationNumber}` : null, p.orderNumber ? `Order: ${p.orderNumber}` : null, p.cost != null ? `${p.currency ?? 'USD'} ${Number(p.cost).toFixed(2)}` : null].filter(Boolean).join(' · '),
+          sub: [p.startDate ? `Drop-off: ${fmtDate(p.startDate)}${p.startTime && p.startTime !== '00:00' ? ` @ ${fmt12(p.startTime)}` : ''}` : null, p.endDate ? `Pick-up: ${fmtDate(p.endDate)}${p.endTime && p.endTime !== '00:00' ? ` @ ${fmt12(p.endTime)}` : ''}` : null, p.confirmationNumber ? `Conf: ${p.confirmationNumber}` : null, p.orderNumber ? `Order: ${p.orderNumber}` : null, p.cost != null ? `${p.currency ?? 'USD'} ${Number(p.cost).toFixed(2)}` : null].filter(Boolean).join(' · '),
           status: p.bookingStatus,
         })),
         ...rentalCars.map((c) => ({

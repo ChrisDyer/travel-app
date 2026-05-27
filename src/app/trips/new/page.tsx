@@ -21,10 +21,17 @@ export default function NewTripPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
     const form = new FormData(e.currentTarget);
+    const startDate = form.get('startDate') as string;
+    const endDate = form.get('endDate') as string;
+    if (startDate && endDate && endDate < startDate) {
+      setError('End date must be on or after start date.');
+      return;
+    }
+
+    setLoading(true);
     const body = {
       title: form.get('title'),
       destination: form.get('destination'),

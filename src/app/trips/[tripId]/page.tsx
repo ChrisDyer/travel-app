@@ -5,6 +5,7 @@ import { getServerUserId } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { ItineraryDocument } from '@/components/itinerary/ItineraryDocument';
 import { PackingChecklist } from '@/components/itinerary/PackingChecklist';
+import { TripHeaderActions } from '@/components/trips/TripHeaderActions';
 import { Trip, TripDay, TripEvent, PackingItem, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
 
 export default async function TripPage({ params }: { params: Promise<{ tripId: string }> }) {
@@ -40,9 +41,12 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
             <p className="text-sm text-stone-500">{trip.destination} · {formatDateRange(trip.startDate, trip.endDate)}</p>
           </div>
         </div>
-        <Link href={`/trips/${tripId}/print`} target="_blank">
-          <Button variant="outline" size="sm">Print / PDF</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <TripHeaderActions trip={trip} />
+          <Link href={`/trips/${tripId}/print`} target="_blank">
+            <Button variant="outline" size="sm">Print / PDF</Button>
+          </Link>
+        </div>
       </header>
 
       <main className="max-w-[1400px] mx-auto px-6 py-10">

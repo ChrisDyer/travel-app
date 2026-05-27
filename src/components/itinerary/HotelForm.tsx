@@ -24,12 +24,22 @@ export function HotelForm({ tripId, hotel, onSaved, onDeleted, onClose }: HotelF
   const isNew = !hotel;
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
+    setError('');
     const form = new FormData(e.currentTarget);
 
+    const checkIn = form.get('checkInDate') as string;
+    const checkOut = form.get('checkOutDate') as string;
+    if (checkIn && checkOut && checkOut < checkIn) {
+      setError('Check-out date must be on or after check-in date.');
+      return;
+    }
+
+    setLoading(true);
     const body = {
       name: form.get('name'),
       address: form.get('address') || null,
@@ -56,6 +66,9 @@ export function HotelForm({ tripId, hotel, onSaved, onDeleted, onClose }: HotelF
     if (res.ok) {
       const saved = await res.json();
       onSaved(saved, isNew);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Something went wrong. Please try again.');
     }
     setLoading(false);
   }
@@ -63,8 +76,13 @@ export function HotelForm({ tripId, hotel, onSaved, onDeleted, onClose }: HotelF
   async function handleDelete() {
     if (!hotel) return;
     setDeleting(true);
-    await fetch(`/api/trips/${tripId}/hotels/${hotel.id}`, { method: 'DELETE' });
-    onDeleted(hotel.id);
+    const res = await fetch(`/api/trips/${tripId}/hotels/${hotel.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      onDeleted(hotel.id);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Failed to delete. Please try again.');
+    }
     setDeleting(false);
   }
 
@@ -164,7 +182,7 @@ export function HotelForm({ tripId, hotel, onSaved, onDeleted, onClose }: HotelF
               <Label htmlFor="cost">Cost</Label>
               <div className="flex gap-2">
                 <Input id="cost" name="cost" type="number" step="0.01" defaultValue={hotel?.cost ?? ''} placeholder="0.00" />
-                <Input name="currency" defaultValue={hotel?.currency ?? 'USD'} className="w-20" />
+                <Input name="currency" aria-label="Currency" defaultValue={hotel?.currency ?? 'USD'} className="w-20" />
               </div>
             </div>
           </div>
@@ -174,11 +192,21 @@ export function HotelForm({ tripId, hotel, onSaved, onDeleted, onClose }: HotelF
             <Textarea id="notes" name="notes" defaultValue={hotel?.notes ?? ''} rows={2} placeholder="Any additional details…" />
           </div>
 
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <div className="flex justify-between pt-2">
             {!isNew ? (
-              <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Deleting…' : 'Delete'}
-              </Button>
+              !confirmDelete ? (
+                <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>Delete</Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-red-600">Delete this hotel?</span>
+                  <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+                    {deleting ? 'Deleting…' : 'Yes, delete'}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+                </div>
+              )
             ) : <div />}
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

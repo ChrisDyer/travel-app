@@ -24,6 +24,8 @@ export function FlightForm({ tripId, flight, onSaved, onDeleted, onClose }: Flig
   const isNew = !flight;
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState('');
   const [tripType, setTripType] = useState<FlightTripType>(flight?.tripType ?? 'one-way');
   const [depDate, setDepDate] = useState(flight?.departureDate ?? '');
 
@@ -70,6 +72,9 @@ export function FlightForm({ tripId, flight, onSaved, onDeleted, onClose }: Flig
     if (res.ok) {
       const saved = await res.json();
       onSaved(saved, isNew);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Something went wrong. Please try again.');
     }
     setLoading(false);
   }
@@ -77,8 +82,13 @@ export function FlightForm({ tripId, flight, onSaved, onDeleted, onClose }: Flig
   async function handleDelete() {
     if (!flight) return;
     setDeleting(true);
-    await fetch(`/api/trips/${tripId}/flights/${flight.id}`, { method: 'DELETE' });
-    onDeleted(flight.id);
+    const res = await fetch(`/api/trips/${tripId}/flights/${flight.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      onDeleted(flight.id);
+    } else {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setError(data.error ?? 'Failed to delete. Please try again.');
+    }
     setDeleting(false);
   }
 
@@ -156,7 +166,7 @@ export function FlightForm({ tripId, flight, onSaved, onDeleted, onClose }: Flig
             </div>
             <div className="mt-2 space-y-1.5">
               <Label htmlFor="arrivalDate" className="text-stone-400 font-normal text-xs">Arrival date if different (overnight)</Label>
-              <Input id="arrivalDate" name="arrivalDate" type="date" defaultValue={flight?.arrivalDate !== flight?.departureDate ? (flight?.arrivalDate ?? '') : ''} />
+              <Input id="arrivalDate" name="arrivalDate" type="date" defaultValue={flight?.arrivalDate ?? ''} />
             </div>
           </div>
 
@@ -249,11 +259,21 @@ export function FlightForm({ tripId, flight, onSaved, onDeleted, onClose }: Flig
             <Textarea id="notes" name="notes" defaultValue={flight?.notes ?? ''} rows={2} placeholder="Any additional details…" />
           </div>
 
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
           <div className="flex justify-between pt-2">
             {!isNew ? (
-              <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Deleting…' : 'Delete'}
-              </Button>
+              !confirmDelete ? (
+                <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>Delete</Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-red-600">Delete this flight?</span>
+                  <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+                    {deleting ? 'Deleting…' : 'Yes, delete'}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+                </div>
+              )
             ) : <div />}
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

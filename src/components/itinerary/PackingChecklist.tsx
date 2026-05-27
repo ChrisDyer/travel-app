@@ -23,26 +23,33 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
   const [addingCategory, setAddingCategory] = useState<PackingCategory | null>(null);
   const [newItemCategory, setNewItemCategory] = useState<PackingCategory>(CATEGORIES[0]);
   const [showGlobalAdd, setShowGlobalAdd] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [addError, setAddError] = useState('');
   const addInputRef = useRef<HTMLInputElement>(null);
   const globalInputRef = useRef<HTMLInputElement>(null);
 
   async function togglePacked(item: PackingItem) {
     const next = !item.isPacked;
-    setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, isPacked: next } : i));
-    await fetch(`/api/trips/${tripId}/packing/${item.id}`, {
+    const res = await fetch(`/api/trips/${tripId}/packing/${item.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isPacked: next }),
     });
+    if (res.ok) {
+      setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, isPacked: next } : i));
+    }
   }
 
   async function deleteItem(id: string) {
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    await fetch(`/api/trips/${tripId}/packing/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/trips/${tripId}/packing/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    }
   }
 
   async function addItem(category: PackingCategory, itemText: string) {
     if (!itemText.trim()) return;
+    setAddError('');
     const sortOrder = items.filter((i) => i.category === category).length;
     const res = await fetch(`/api/trips/${tripId}/packing`, {
       method: 'POST',
@@ -52,6 +59,8 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
     if (res.ok) {
       const saved = await res.json();
       setItems((prev) => [...prev, saved]);
+    } else {
+      setAddError('Failed to add item. Please try again.');
     }
   }
 
@@ -107,13 +116,30 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
                     <span className={`text-sm flex-1 ${pi.isPacked ? 'line-through text-stone-400' : 'text-stone-700'}`}>
                       {pi.item}
                     </span>
-                    <button
-                      onClick={() => deleteItem(pi.id)}
-                      className="opacity-0 group-hover:opacity-100 text-stone-300 hover:text-red-400 transition-opacity text-xs leading-none"
-                      aria-label="Remove item"
-                    >
-                      ✕
-                    </button>
+                    {confirmDeleteId === pi.id ? (
+                      <span className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => { deleteItem(pi.id); setConfirmDeleteId(null); }}
+                          className="text-xs text-red-500 hover:text-red-700 font-medium"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="text-xs text-stone-400 hover:text-stone-600"
+                        >
+                          Cancel
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(pi.id)}
+                        className="opacity-0 group-hover:opacity-100 text-stone-300 hover:text-red-400 transition-opacity text-xs leading-none"
+                        aria-label="Remove item"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -144,27 +170,30 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
 
       <div className="mt-8">
         {showGlobalAdd ? (
-          <div className="flex items-center gap-3 max-w-md">
-            <Select value={newItemCategory} onValueChange={(v) => setNewItemCategory(v as PackingCategory)}>
-              <SelectTrigger className="w-52 h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c} className="text-sm">{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              ref={globalInputRef}
-              autoFocus
-              placeholder="Item name, then Enter"
-              onKeyDown={handleGlobalKeyDown}
-              className="h-8 text-sm flex-1"
-            />
-            <Button variant="ghost" size="sm" onClick={() => setShowGlobalAdd(false)} className="text-stone-400">
-              Cancel
-            </Button>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 max-w-md">
+              <Select value={newItemCategory} onValueChange={(v) => setNewItemCategory(v as PackingCategory)}>
+                <SelectTrigger className="w-52 h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c} className="text-sm">{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                ref={globalInputRef}
+                autoFocus
+                placeholder="Item name, then Enter"
+                onKeyDown={handleGlobalKeyDown}
+                className="h-8 text-sm flex-1"
+              />
+              <Button variant="ghost" size="sm" onClick={() => setShowGlobalAdd(false)} className="text-stone-400">
+                Cancel
+              </Button>
+            </div>
+            {addError && <p className="text-sm text-red-600">{addError}</p>}
           </div>
         ) : (
           <Button variant="outline" size="sm" onClick={() => setShowGlobalAdd(true)}>
