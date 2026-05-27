@@ -1,6 +1,6 @@
 # Travel App — Deployment Runbook
 
-> This runbook describes a Hetzner VPS + Cloudflare Zero Trust deployment. Adapt paths, domain, and provider details for your own setup.
+> This runbook describes a Hetzner VPS + Cloudflare Zero Trust deployment.
 
 ## Stack
 
@@ -9,12 +9,12 @@
 | Hosting | Hetzner Cloud VPS (CAX11, ARM, 2 vCPU / 4 GB RAM) |
 | OS | Ubuntu 24.04 |
 | Runtime | Node.js v24 via nvm |
-| Process manager | PM2 |
+| Process manager | PM2 (via `start.sh` wrapper) |
 | Reverse proxy | nginx (SSL termination) |
 | Auth | Cloudflare Access (Zero Trust, email allowlist) |
 | DNS | Cloudflare |
-| Database | SQLite (`local.db` at project root) |
-| Backups | Daily rclone to cloud storage |
+| Database | SQLite (`~/travel-app/local.db`) |
+| Backups | Daily rclone to OneDrive |
 
 ---
 
@@ -22,21 +22,17 @@
 
 ### 1. Provision server
 
-- Type: CAX11 (ARM, 2 vCPU, 4 GB RAM) — sufficient for a personal app
+- Type: CAX11 (ARM, 2 vCPU, 4 GB RAM)
 - Image: Ubuntu 24.04
-- Location: choose a region close to your users
 - SSH key: add your existing public key during provisioning
 
 ### 2. Firewall (UFW)
-
-Lock down the server before exposing it to the internet. Port 3000 (Node) must never be publicly reachable — only nginx.
 
 ```bash
 ufw allow 22/tcp    # SSH
 ufw allow 80/tcp    # HTTP (redirect to HTTPS)
 ufw allow 443/tcp   # HTTPS
 ufw enable
-ufw status
 ```
 
 ### 3. Node.js via nvm
@@ -60,57 +56,87 @@ pm2 startup
 ### 5. Clone repo and build
 
 ```bash
-git clone <repo-url> ~/travel-app
+# Remove any stale package-lock.json in the home directory first.
+# If one exists, Next.js treats ~ as a workspace root and nests the
+# standalone output under .next/standalone/<appname>/ instead of
+# .next/standalone/ — breaking the PM2 start path.
+rm -f ~/package-lock.json
+
+git clone https://github.com/ChrisDyer/travel-app.git ~/travel-app
 cd ~/travel-app
+export PATH=~/.nvm/versions/node/v24.16.0/bin:$PATH
 npm install
 npm run build
+
+# Copy static assets into standalone output (required after every build)
+cp -r .next/static .next/standalone/.next/static
+cp -r public/. .next/standalone/public/
 ```
+
+> **Why `public/.` and not `public`?** When the destination directory already exists,
+> `cp -r public dest` copies `public` *into* `dest`, creating `dest/public/`. Using
+> `public/.` copies the *contents* instead, avoiding a nested `public/public/` on
+> subsequent deploys.
 
 ### 6. Create persistent directories
 
-These directories are not tracked by git and must exist on the server.
-
 ```bash
 mkdir -p ~/travel-app/public/trip-photos
-# SQLite DB (local.db) is created automatically on first run
+# SQLite DB (local.db) is created automatically on first run at DB_PATH
 ```
-
-> **Cover photos** are stored in `public/trip-photos/` and persist across deploys. `git pull` will not delete them because this directory is in `.gitignore`. They are only lost if you wipe the server — back up with the DB (see Backups section).
 
 ### 7. Environment variables
 
 Create `~/travel-app/.env.local`:
 
 ```
+PORT=3001
 ANTHROPIC_API_KEY=
 GOOGLE_GMAIL_CLIENT_ID=
 GOOGLE_GMAIL_CLIENT_SECRET=
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
-NEXT_PUBLIC_APP_URL=https://your-domain.com
-PORT=3000
+NEXT_PUBLIC_APP_URL=https://travel.zo-bot.com
+DB_PATH=/home/chris/travel-app/local.db
 ```
 
 See `README.md` for how to obtain each value.
 
-### 8. Cloudflare Origin Certificate
+> **`DB_PATH`** — Next.js standalone calls `process.chdir(__dirname)` at startup,
+> changing the working directory to `.next/standalone/`. Without `DB_PATH`, the app
+> creates `local.db` inside `.next/standalone/`, which is wiped on every build.
+> Setting an absolute path keeps the database outside the build output.
 
-This must be done **before** configuring nginx, as nginx references these files.
+### 8. PM2 start script
 
-1. Cloudflare dashboard → your domain → **SSL/TLS** → **Origin Server** → **Create Certificate**
-2. Key type: RSA, validity: 15 years, hostnames: `your-domain.com`
-3. Copy the certificate and private key to the server:
+Next.js standalone does **not** read `.env.local` at runtime — environment variables
+must already be in the process environment. A wrapper script handles this:
+
+Create `~/travel-app/start.sh`:
 
 ```bash
-# On your local machine:
-ssh your-user@YOUR_VPS_IP "sudo tee /etc/ssl/cloudflare-travel.pem" < cloudflare-travel.pem
-ssh your-user@YOUR_VPS_IP "sudo tee /etc/ssl/cloudflare-travel.key" < cloudflare-travel.key
+#!/bin/bash
+set -a
+source ~/travel-app/.env.local
+set +a
+exec node ~/travel-app/.next/standalone/server.js
 ```
 
-Or paste the content directly via SSH into those two files on the server.
+```bash
+chmod +x ~/travel-app/start.sh
+```
 
-### 9. nginx config
+### 9. Cloudflare Origin Certificate
 
-Install nginx and create the site config:
+The wildcard cert (`*.zo-bot.com`) is already on the server at:
+- `/etc/ssl/cloudflare.pem`
+- `/etc/ssl/cloudflare.key`
+
+It covers all subdomains including `travel.zo-bot.com` — no new certificate needed.
+
+If setting up on a fresh server, create one via Cloudflare dashboard → your domain →
+**SSL/TLS** → **Origin Server** → **Create Certificate** (RSA, 15 years, wildcard hostname).
+
+### 10. nginx config
 
 ```bash
 apt install -y nginx
@@ -121,25 +147,19 @@ Create `/etc/nginx/sites-available/travel`:
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name travel.zo-bot.com;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl;
-    server_name your-domain.com;
+    server_name travel.zo-bot.com;
 
-    ssl_certificate     /etc/ssl/cloudflare-travel.pem;
-    ssl_certificate_key /etc/ssl/cloudflare-travel.key;
-
-    # Only accept connections from Cloudflare (optional but recommended)
-    # See https://www.cloudflare.com/ips/ for current ranges
-    # allow 103.21.244.0/22;
-    # ... (add all Cloudflare IP ranges)
-    # deny all;
+    ssl_certificate     /etc/ssl/cloudflare.pem;
+    ssl_certificate_key /etc/ssl/cloudflare.key;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -156,77 +176,92 @@ ln -s /etc/nginx/sites-available/travel /etc/nginx/sites-enabled/
 nginx -t && systemctl enable nginx && systemctl start nginx
 ```
 
-### 10. Cloudflare Zero Trust (Access)
-
-This gates the entire site behind Google SSO — no in-app login needed.
-
-1. [Cloudflare Zero Trust](https://one.dash.cloudflare.com) → **Access** → **Applications** → **Add an application** → **Self-hosted**
-2. App name: Travel App, App domain: `your-domain.com`
-3. Create a policy: **Allow**, rule type: **Emails**, value: `your-email@example.com`
-4. Save
-
-The app reads the `cf-access-authenticated-user-email` header to identify users. Each email gets its own isolated set of trips.
-
-In Cloudflare DNS, set your domain's A record to `YOUR_VPS_IP` with proxy status **Proxied** (orange cloud).
-
-### 11. Google OAuth redirect URI
-
-Add the production redirect URI to your OAuth client:
-
-1. Google Cloud Console → **APIs & Services** → **Credentials** → your OAuth 2.0 client
-2. Under **Authorized redirect URIs**, add: `https://your-domain.com/api/gmail/callback`
-3. Update `NEXT_PUBLIC_APP_URL` in `.env.local` on the VPS if not already set
-
-### 12. Start the app
+### 11. Start the app
 
 ```bash
-cd ~/travel-app
-pm2 start .next/standalone/server.js --name travel-app
+pm2 start ~/travel-app/start.sh --name travel-app --cwd ~/travel-app --interpreter bash
 pm2 save
 ```
 
-### 13. Verify
+### 12. Cloudflare Zero Trust (Access)
 
-- Open `https://your-domain.com` — you should be redirected to Cloudflare Access login
-- Sign in with your allowed email — you should land on the trips page
-- Create a trip, add a cover photo — confirm the photo appears
-- Open a trip, open Trip Assistant → verify AI responses work
-- Open Trip Assistant → Extract from Email → confirm Gmail connect flow works
-- Open the print page for a trip with flights/hotels — confirm all bookings appear
+Gates the entire site behind Google SSO.
+
+1. [Cloudflare Zero Trust](https://one.dash.cloudflare.com) → **Access** → **Applications** → **Add an application** → **Self-hosted**
+2. App name: Travel App, App domain: `travel.zo-bot.com`
+3. Policy: **Allow**, rule type: **Emails**, value: `chrissdyer@gmail.com`
+
+In Cloudflare DNS, set an A record for `travel` pointing to the VPS IP, **Proxied**.
+
+### 13. Google OAuth redirect URI
+
+1. Google Cloud Console → **APIs & Services** → **Credentials** → your OAuth 2.0 client
+2. Add to **Authorized redirect URIs**: `https://travel.zo-bot.com/api/gmail/callback`
+
+### 14. Verify
+
+- Open `https://travel.zo-bot.com` — Cloudflare Access login appears
+- Sign in → trips page loads
+- Create a trip, add a cover photo — photo appears
+- Open Trip Assistant → AI responds
+- Open Trip Assistant → Extract from Email → Gmail connect flow works
+- Print page for a trip with flights/hotels — all bookings appear
 
 ---
 
 ## Deployment (after initial setup)
 
-Add to your PowerShell `$PROFILE` on your local machine:
+`Deploy-Travel` is defined in PowerShell `$PROFILE` on the local machine:
 
 ```powershell
 function Deploy-Travel {
-    $vps = "your-user@YOUR_VPS_IP"
-    ssh $vps "export PATH=~/.nvm/versions/node/v24.16.0/bin:`$PATH && cd ~/travel-app && git pull && npm install && npm run build && pm2 restart travel-app"
+    ssh chris@91.99.230.234 "export PATH=~/.nvm/versions/node/v24.16.0/bin:`$PATH && cd ~/travel-app && git pull && npm install && sudo rm -rf .next && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public/. .next/standalone/public/ && pm2 restart travel-app"
 }
 ```
 
-Then deploy with:
+Run `Deploy-Travel` from any PowerShell prompt.
+
+> **`sudo rm -rf .next` before every build** — static files copied into
+> `.next/standalone/public/` in a previous deploy can be owned by root,
+> causing subsequent builds to fail with `EACCES: permission denied`.
+> Removing `.next/` first prevents this.
+
+---
+
+## Migrating data from local development
 
 ```powershell
-Deploy-Travel
+# Copy all three SQLite files — the WAL holds uncommitted transactions
+scp C:\Users\chris\OneDrive\Apps\travel-app\local.db chris@91.99.230.234:~/travel-app/local.db
+scp C:\Users\chris\OneDrive\Apps\travel-app\local.db-wal chris@91.99.230.234:~/travel-app/local.db-wal
+scp C:\Users\chris\OneDrive\Apps\travel-app\local.db-shm chris@91.99.230.234:~/travel-app/local.db-shm
 ```
 
-This pulls the latest code, reinstalls dependencies if changed, rebuilds, and restarts the process. Cover photos and the SQLite DB are unaffected.
+On the VPS, checkpoint and normalise user IDs:
+
+```bash
+sqlite3 ~/travel-app/local.db "PRAGMA wal_checkpoint(TRUNCATE);"
+sqlite3 ~/travel-app/local.db "UPDATE trips SET user_id = 'local';"
+export PATH=~/.nvm/versions/node/v24.16.0/bin:$PATH && pm2 restart travel-app
+```
+
+> The app runs in single-user mode — all data is stored under `user_id = 'local'`.
+> Local dev data may have a different user_id depending on how auth was configured;
+> the UPDATE above normalises it.
 
 ---
 
 ## Rollback
 
-If a deploy breaks something:
-
 ```bash
 # On the VPS:
 cd ~/travel-app
 git log --oneline -10          # Find the last good commit hash
-git checkout <commit-hash>     # Detach to that commit
-npm run build
+git checkout <commit-hash>
+export PATH=~/.nvm/versions/node/v24.16.0/bin:$PATH
+sudo rm -rf .next && npm run build
+cp -r .next/static .next/standalone/.next/static
+cp -r public/. .next/standalone/public/
 pm2 restart travel-app
 
 # To return to normal tracking:
@@ -237,28 +272,15 @@ git checkout main
 
 ## Backups
 
-Cover photos and the SQLite DB live outside git. Back them up together.
-
-### rclone setup (first time)
-
-```bash
-# On the VPS — configure rclone with your backup destination (OneDrive, S3, etc.)
-rclone config
-# Follow prompts to set up a remote named "backup-remote"
-```
-
-### Daily cron
-
 ```bash
 crontab -e
-# Add these two lines:
-0 2 * * * rclone copy ~/travel-app/local.db backup-remote:/travel-app/db/ --log-file=/var/log/rclone-travel.log
-5 2 * * * rclone sync ~/travel-app/public/trip-photos/ backup-remote:/travel-app/trip-photos/ --log-file=/var/log/rclone-travel.log
+# Add:
+0 2 * * * rclone copy ~/travel-app/local.db onedrive:/travel-app-backups/ --log-file=/var/log/rclone-travel.log
+5 2 * * * rclone sync ~/travel-app/public/trip-photos/ onedrive:/travel-app-photos/ --log-file=/var/log/rclone-travel.log
 ```
 
-### Hetzner snapshots
-
-Hetzner Console → Server → **Backups** → Enable automatic daily snapshots. This covers everything as a full-disk fallback.
+Enable Hetzner automatic snapshots as a full-disk fallback:
+Hetzner Console → Server → **Backups** → Enable.
 
 ---
 
@@ -269,28 +291,62 @@ pm2 status                     # Check app status
 pm2 logs travel-app            # Stream logs
 pm2 logs travel-app --lines 50 # Last 50 log lines
 pm2 restart travel-app         # Restart app
-pm2 reload travel-app          # Zero-downtime reload
 
 nginx -t                       # Test nginx config
-systemctl reload nginx         # Apply nginx changes without downtime
+systemctl reload nginx         # Apply nginx changes
 
 df -h                          # Check disk space
-du -sh ~/travel-app/public/trip-photos/  # Check photo storage size
+du -sh ~/travel-app/public/trip-photos/  # Check photo storage
 sqlite3 ~/travel-app/local.db ".tables"  # Verify DB is intact
+sqlite3 ~/travel-app/local.db "SELECT count(*) FROM trips;"
 ```
 
 ---
 
-## Notes
+## Architecture notes
 
 ### DB location
 
-SQLite DB is at `~/travel-app/local.db`. The `next.config.ts` `standalone` output places `server.js` at `.next/standalone/server.js` (two levels inside the project). PM2 is started from `~/travel-app`, so `process.cwd()` resolves to the project root — the DB and `public/trip-photos/` paths are correct. Do not change the PM2 start directory.
+SQLite DB lives at `~/travel-app/local.db` (set via `DB_PATH` in `.env.local`).
+This is outside `.next/` and survives builds. Do not change this path without
+updating `.env.local`.
+
+### Why `process.chdir` matters
+
+`server.js` calls `process.chdir(__dirname)` at startup, changing the working
+directory to `.next/standalone/`. Any path resolved with `process.cwd()` points
+there — including the DB path if `DB_PATH` is not set. Always set `DB_PATH`.
+
+### Static assets
+
+After every build, two manual copy steps are needed:
+
+```bash
+cp -r .next/static .next/standalone/.next/static  # JS/CSS chunks
+cp -r public/. .next/standalone/public/            # Public assets + cover photos
+```
+
+Next.js does not do this automatically. The `Deploy-Travel` alias includes both steps.
+
+### Single-user mode
+
+The app stores all data under `user_id = 'local'`. `src/lib/auth.ts` always returns
+`'local'` — no login or session management is needed. Access control is handled
+entirely by Cloudflare Zero Trust at the network layer.
+
+`getServerUserId()` still calls `await headers()` even though it ignores the value —
+this is intentional. Calling a Next.js dynamic function opts all pages that use it
+out of static pre-rendering, ensuring the DB is queried fresh on every request.
 
 ### Photo storage
 
-Cover photos are written to `public/trip-photos/{tripId}.jpg` at runtime. This directory is in `.gitignore` so deploys never touch it. If you migrate servers, copy this directory (and `local.db`) before decommissioning.
+Cover photos are written to `~/travel-app/public/trip-photos/{tripId}.jpg` at runtime.
+This directory is in `.gitignore` and is not touched by deploys. If migrating servers,
+copy this directory alongside `local.db`.
 
 ### Authentication in dev vs production
 
-In local development (`NODE_ENV !== 'production'`), `src/lib/auth.ts` falls back to `user_id = 'local'` with no login required. In production behind Cloudflare Access, the `cf-access-authenticated-user-email` header is set on every request and used as the user ID. Never expose the app directly to the internet without Cloudflare Access in front of it.
+In development (`npm run dev`), no Cloudflare header is present and auth returns
+`'local'` via the fallback. In production, the same `'local'` value is returned
+unconditionally. There is no behavioural difference — this is intentional for a
+single-user app.
