@@ -1,0 +1,285 @@
+'use client';
+
+import { useState } from 'react';
+import { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, PackingItem } from '@/types/travel';
+import { DaySection } from './DaySection';
+import { EventForm } from './EventForm';
+import { KeyBookings } from './KeyBookings';
+import { TripMap, MapLocation } from './TripMap';
+import { CancellationDeadlines } from './CancellationDeadlines';
+import { FlightForm } from './FlightForm';
+import { HotelForm } from './HotelForm';
+import { ParkingForm } from './ParkingForm';
+import { RentalCarForm } from './RentalCarForm';
+import { PackingChecklist } from './PackingChecklist';
+import { TripAssistant } from '@/components/trips/TripAssistant';
+
+interface ItineraryDocumentProps {
+  trip: Trip;
+  initialDays: TripDay[];
+  initialEvents: TripEvent[];
+  initialFlights: TripFlight[];
+  initialHotels: TripHotel[];
+  initialParking: TripParking[];
+  initialRentalCars: TripRentalCar[];
+  initialTransit: TripTransit[];
+  initialPackingItems: PackingItem[];
+}
+
+export function ItineraryDocument({ trip, initialDays, initialEvents, initialFlights, initialHotels, initialParking, initialRentalCars, initialTransit, initialPackingItems }: ItineraryDocumentProps) {
+  const [events, setEvents] = useState<TripEvent[]>(initialEvents);
+  const [flights, setFlights] = useState<TripFlight[]>(initialFlights);
+  const [hotels, setHotels] = useState<TripHotel[]>(initialHotels);
+  const [parking, setParking] = useState<TripParking[]>(initialParking);
+  const [rentalCars, setRentalCars] = useState<TripRentalCar[]>(initialRentalCars);
+  const [editingEvent, setEditingEvent] = useState<TripEvent | null>(null);
+  const [addingToDay, setAddingToDay] = useState<TripDay | null>(null);
+  const [editingFlight, setEditingFlight] = useState<TripFlight | null>(null);
+  const [editingHotel, setEditingHotel] = useState<TripHotel | null>(null);
+  const [editingParking, setEditingParking] = useState<TripParking | null>(null);
+  const [editingRentalCar, setEditingRentalCar] = useState<TripRentalCar | null>(null);
+  const [selectedDay, setSelectedDay] = useState<TripDay | null>(null);
+
+  function handleEventSaved(event: TripEvent, isNew: boolean) {
+    setEvents((prev) => isNew ? [...prev, event] : prev.map((e) => e.id === event.id ? event : e));
+    setEditingEvent(null);
+    setAddingToDay(null);
+  }
+
+  function handleEventDeleted(eventId: string) {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+    setEditingEvent(null);
+  }
+
+  const eventsForDay = (dayId: string) =>
+    events
+      .filter((e) => e.tripDayId === dayId)
+      .sort((a, b) => {
+        if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime);
+        return a.sortOrder - b.sortOrder;
+      });
+
+  function flightsForDay(date: string) {
+    const items: { flight: TripFlight; role: 'departure' | 'arrival' | 'return-departure' | 'return-arrival' }[] = [];
+    for (const f of flights) {
+      if (f.departureDate === date) items.push({ flight: f, role: 'departure' });
+      // Arrival: show on arrivalDate if set, otherwise fall back to departureDate when arrivalTime exists
+      const effectiveArrDate = f.arrivalDate ?? (f.arrivalTime ? f.departureDate : null);
+      if (f.arrivalTime && effectiveArrDate === date) {
+        items.push({ flight: f, role: 'arrival' });
+      }
+      if (f.tripType === 'round-trip') {
+        if (f.returnDepartureDate === date) items.push({ flight: f, role: 'return-departure' });
+        const effectiveRetArrDate = f.returnArrivalDate ?? (f.returnArrivalTime ? f.returnDepartureDate : null);
+        if (f.returnArrivalTime && effectiveRetArrDate === date) {
+          items.push({ flight: f, role: 'return-arrival' });
+        }
+      }
+    }
+    return items;
+  }
+
+  function parkingForDay(date: string) {
+    const items: { parking: TripParking; role: 'dropoff' | 'pickup' }[] = [];
+    for (const p of parking) {
+      if (p.startDate === date) items.push({ parking: p, role: 'dropoff' });
+      if (p.endDate && p.endDate !== p.startDate && p.endDate === date) {
+        items.push({ parking: p, role: 'pickup' });
+      }
+    }
+    return items;
+  }
+
+  function rentalCarsForDay(date: string) {
+    const items: { rentalCar: TripRentalCar; role: 'pickup' | 'dropoff' }[] = [];
+    for (const c of rentalCars) {
+      if (c.pickupDate === date) items.push({ rentalCar: c, role: 'pickup' });
+      if (c.dropoffDate && c.dropoffDate !== c.pickupDate && c.dropoffDate === date) {
+        items.push({ rentalCar: c, role: 'dropoff' });
+      }
+    }
+    return items;
+  }
+
+  function hotelsForDay(date: string) {
+    const items: { hotel: TripHotel; role: 'checkin' | 'checkout' }[] = [];
+    for (const h of hotels) {
+      if (h.checkInDate === date) items.push({ hotel: h, role: 'checkin' });
+      if (h.checkOutDate === date) items.push({ hotel: h, role: 'checkout' });
+    }
+    return items;
+  }
+
+  // The home airport is the departure of the first (earliest) flight — never show its parking on the map.
+  const firstFlight = [...flights]
+    .filter((f) => f.departureDate && f.departureAirport)
+    .sort((a, b) => a.departureDate!.localeCompare(b.departureDate!))[0];
+  const homeAirportCode = firstFlight?.departureAirport
+    ? (firstFlight.departureAirport.match(/\(([A-Z]{3})\)/i)?.[1]?.toUpperCase() ?? firstFlight.departureAirport.toUpperCase())
+    : null;
+  function isDepartureAirportParking(location: string): boolean {
+    if (!homeAirportCode) return false;
+    const match = location.match(/\(([A-Z]{3})\)/);
+    return match ? match[1] === homeAirportCode : false;
+  }
+
+  const mapLocations: MapLocation[] = [
+    ...hotels.filter((h) => h.address).map((h) => ({ title: h.name, address: h.address!, type: 'hotel' as const })),
+    ...parking.filter((p) => p.address && !isDepartureAirportParking(p.location)).map((p) => ({ title: p.location, address: p.address!, type: 'parking' as const })),
+    ...events.filter((e) => e.location).map((e) => ({ title: e.title, address: e.location!, type: 'event' as const })),
+    ...rentalCars.filter((c) => c.pickupLocation).map((c) => ({ title: `${c.company} Pick-up`, address: c.pickupLocation!, type: 'rental' as const })),
+  ];
+
+  function getActiveMapLocations(date: string): MapLocation[] {
+    return [
+      ...hotels
+        .filter((h) => h.address && h.checkInDate && date >= h.checkInDate && (!h.checkOutDate || date < h.checkOutDate))
+        .map((h) => ({ title: h.name, address: h.address!, type: 'hotel' as const })),
+      ...parking
+        .filter((p) => p.address && !isDepartureAirportParking(p.location) && p.startDate && date >= p.startDate && date <= (p.endDate ?? p.startDate))
+        .map((p) => ({ title: p.location, address: p.address!, type: 'parking' as const })),
+      ...events
+        .filter((e) => e.location && initialDays.find((d) => d.id === e.tripDayId)?.date === date)
+        .map((e) => ({ title: e.title, address: e.location!, type: 'event' as const })),
+      ...rentalCars
+        .filter((c) => c.pickupLocation && c.pickupDate && date >= c.pickupDate && (!c.dropoffDate || date <= c.dropoffDate))
+        .map((c) => ({ title: `${c.company} Pick-up`, address: c.pickupLocation!, type: 'rental' as const })),
+    ];
+  }
+
+  return (
+    <>
+      <TripAssistant
+        tripId={trip.id}
+        days={initialDays}
+        onEventsAdded={(newEvents) => setEvents((prev) => [...prev, ...newEvents])}
+        onFlightsAdded={(newFlights) => setFlights((prev) => [...prev, ...newFlights])}
+        onHotelsAdded={(newHotels) => setHotels((prev) => [...prev, ...newHotels])}
+      />
+
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-[640px_1fr] gap-8 items-start">
+        {/* Left column: map + bookings + cancellations */}
+        <div className="lg:sticky lg:top-8">
+          <TripMap
+            locations={mapLocations}
+            activeLocations={selectedDay ? getActiveMapLocations(selectedDay.date) : undefined}
+            selectedDate={selectedDay?.date}
+            onClear={() => setSelectedDay(null)}
+          />
+
+          <KeyBookings
+            tripId={trip.id}
+            travelMode={trip.travelMode}
+            rentalCarNeeded={trip.rentalCarNeeded}
+            initialFlights={initialFlights}
+            initialHotels={initialHotels}
+            initialParking={initialParking}
+            initialRentalCars={initialRentalCars}
+            initialTransit={initialTransit}
+            onFlightsChange={setFlights}
+            onHotelsChange={setHotels}
+            onParkingChange={setParking}
+            onRentalCarsChange={setRentalCars}
+            onTransitChange={() => {}}
+          />
+
+          <CancellationDeadlines
+            hotels={hotels}
+            events={events}
+            flights={flights}
+            rentalCars={rentalCars}
+            parking={parking}
+            transit={initialTransit}
+          />
+        </div>
+
+        {/* Right column: daily itinerary */}
+        <div className="space-y-12">
+          {initialDays.map((day) => (
+            <DaySection
+              key={day.id}
+              day={day}
+              events={eventsForDay(day.id)}
+              dayFlights={flightsForDay(day.date)}
+              dayHotels={hotelsForDay(day.date)}
+              dayParking={parkingForDay(day.date)}
+              dayRentalCars={rentalCarsForDay(day.date)}
+              isSelected={selectedDay?.id === day.id}
+              onSelectDay={(d) => setSelectedDay((prev) => prev?.id === d.id ? null : d)}
+              onAddEvent={setAddingToDay}
+              onEditEvent={setEditingEvent}
+              onEditFlight={(f) => setEditingFlight(f)}
+              onEditHotel={(h) => setEditingHotel(h)}
+              onEditParking={(p) => setEditingParking(p)}
+              onEditRentalCar={(c) => setEditingRentalCar(c)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {(editingEvent || addingToDay) && (
+        <EventForm
+          tripId={trip.id}
+          day={addingToDay ?? (initialDays.find((d) => d.id === editingEvent!.tripDayId) ?? initialDays[0])}
+          days={initialDays}
+          event={editingEvent}
+          onSaved={handleEventSaved}
+          onDeleted={handleEventDeleted}
+          onClose={() => { setEditingEvent(null); setAddingToDay(null); }}
+        />
+      )}
+
+      {editingFlight && (
+        <FlightForm
+          tripId={trip.id}
+          flight={editingFlight}
+          onSaved={(f, isNew) => {
+            setFlights((prev) => isNew ? [...prev, f] : prev.map((x) => x.id === f.id ? f : x));
+            setEditingFlight(null);
+          }}
+          onDeleted={(id) => { setFlights((prev) => prev.filter((x) => x.id !== id)); setEditingFlight(null); }}
+          onClose={() => setEditingFlight(null)}
+        />
+      )}
+
+      {editingHotel && (
+        <HotelForm
+          tripId={trip.id}
+          hotel={editingHotel}
+          onSaved={(h, isNew) => {
+            setHotels((prev) => isNew ? [...prev, h] : prev.map((x) => x.id === h.id ? h : x));
+            setEditingHotel(null);
+          }}
+          onDeleted={(id) => { setHotels((prev) => prev.filter((x) => x.id !== id)); setEditingHotel(null); }}
+          onClose={() => setEditingHotel(null)}
+        />
+      )}
+
+      {editingParking && (
+        <ParkingForm
+          tripId={trip.id}
+          parking={editingParking}
+          onSaved={(p, isNew) => {
+            setParking((prev) => isNew ? [...prev, p] : prev.map((x) => x.id === p.id ? p : x));
+            setEditingParking(null);
+          }}
+          onDeleted={(id) => { setParking((prev) => prev.filter((x) => x.id !== id)); setEditingParking(null); }}
+          onClose={() => setEditingParking(null)}
+        />
+      )}
+
+      {editingRentalCar && (
+        <RentalCarForm
+          tripId={trip.id}
+          rentalCar={editingRentalCar}
+          onSaved={(c, isNew) => {
+            setRentalCars((prev) => isNew ? [...prev, c] : prev.map((x) => x.id === c.id ? c : x));
+            setEditingRentalCar(null);
+          }}
+          onDeleted={(id) => { setRentalCars((prev) => prev.filter((x) => x.id !== id)); setEditingRentalCar(null); }}
+          onClose={() => setEditingRentalCar(null)}
+        />
+      )}
+    </>
+  );
+}

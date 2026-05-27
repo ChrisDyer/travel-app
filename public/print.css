@@ -1,0 +1,8 @@
+@media print {
+  .no-print { display: none !important; }
+  .day-section { page-break-before: always; }
+  .day-section:first-child { page-break-before: avoid; }
+  .event-card { page-break-inside: avoid; }
+  body { font-size: 11pt; }
+  a { color: inherit; text-decoration: none; }
+}
