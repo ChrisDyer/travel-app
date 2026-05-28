@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, camelize } from '@/db';
 import { getUserId } from '@/lib/auth';
-import type { Proposal, TripEvent, TripFlight, TripHotel } from '@/types/travel';
+import type { Proposal, TripEvent, TripFlight, TripHotel, TripRentalCar, TripParking, TripTransit } from '@/types/travel';
 
 export async function POST(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
@@ -16,6 +16,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   const addedEvents: TripEvent[] = [];
   const addedFlights: TripFlight[] = [];
   const addedHotels: TripHotel[] = [];
+  const addedRentalCars: TripRentalCar[] = [];
+  const addedParking: TripParking[] = [];
+  const addedTransit: TripTransit[] = [];
 
   for (const proposal of body.proposals) {
     if (proposal.type === 'event') {
@@ -74,8 +77,68 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
         proposal.notes ?? null, now, now
       ) as Record<string, unknown>;
       addedHotels.push(camelize<TripHotel>(row));
+
+    } else if (proposal.type === 'rental_car') {
+      const id = crypto.randomUUID();
+      const row = db.prepare(`
+        INSERT INTO trip_rental_cars (
+          id, trip_id, company, car_class, confirmation_number,
+          pickup_date, pickup_time, pickup_location,
+          dropoff_date, dropoff_time, dropoff_location,
+          booking_status, cost, currency, notes, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING *
+      `).get(
+        id, tripId, proposal.company, proposal.carClass ?? null,
+        proposal.confirmationNumber ?? null,
+        proposal.pickupDate ?? null, proposal.pickupTime ?? null, proposal.pickupLocation ?? null,
+        proposal.dropoffDate ?? null, proposal.dropoffTime ?? null, proposal.dropoffLocation ?? null,
+        proposal.bookingStatus ?? 'unbooked', proposal.cost ?? null, proposal.currency ?? null,
+        proposal.notes ?? null, now, now
+      ) as Record<string, unknown>;
+      addedRentalCars.push(camelize<TripRentalCar>(row));
+
+    } else if (proposal.type === 'parking') {
+      const id = crypto.randomUUID();
+      const row = db.prepare(`
+        INSERT INTO trip_parking (
+          id, trip_id, location, address, level, start_date, start_time, end_date, end_time,
+          confirmation_number, order_number, vendor, booking_status, cost, currency, notes,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING *
+      `).get(
+        id, tripId, proposal.location, proposal.address ?? null, null,
+        proposal.startDate ?? null, proposal.startTime ?? null,
+        proposal.endDate ?? null, proposal.endTime ?? null,
+        proposal.confirmationNumber ?? null, proposal.orderNumber ?? null, proposal.vendor ?? null,
+        proposal.bookingStatus ?? 'unbooked', proposal.cost ?? null, proposal.currency ?? null,
+        proposal.notes ?? null, now, now
+      ) as Record<string, unknown>;
+      addedParking.push(camelize<TripParking>(row));
+
+    } else if (proposal.type === 'transit') {
+      const id = crypto.randomUUID();
+      const row = db.prepare(`
+        INSERT INTO trip_transit (
+          id, trip_id, transit_type, operator, route_number, from_location, to_location,
+          departure_date, departure_time, arrival_date, arrival_time,
+          confirmation_number, seat_info, booking_status, cost, currency, notes,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING *
+      `).get(
+        id, tripId, proposal.transitType ?? null, proposal.operator,
+        proposal.routeNumber ?? null, proposal.fromLocation ?? null, proposal.toLocation ?? null,
+        proposal.departureDate ?? null, proposal.departureTime ?? null,
+        proposal.arrivalDate ?? null, proposal.arrivalTime ?? null,
+        proposal.confirmationNumber ?? null, proposal.seatInfo ?? null,
+        proposal.bookingStatus ?? 'unbooked', proposal.cost ?? null, proposal.currency ?? null,
+        proposal.notes ?? null, now, now
+      ) as Record<string, unknown>;
+      addedTransit.push(camelize<TripTransit>(row));
     }
   }
 
-  return NextResponse.json({ addedEvents, addedFlights, addedHotels });
+  return NextResponse.json({ addedEvents, addedFlights, addedHotels, addedRentalCars, addedParking, addedTransit });
 }

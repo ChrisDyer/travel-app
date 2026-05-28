@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { db, camelize, camelizeAll } from '@/db';
 import { getUserId } from '@/lib/auth';
-import type { Trip, TripDay, TripEvent, TripFlight, TripHotel, Proposal } from '@/types/travel';
+import type { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripRentalCar, TripParking, TripTransit, Proposal } from '@/types/travel';
 
 const anthropic = new Anthropic();
 
@@ -72,6 +72,77 @@ const TOOLS: Anthropic.Tool[] = [
         notes: { type: 'string' },
       },
       required: ['name'],
+    },
+  },
+  {
+    name: 'propose_rental_car',
+    description: 'Propose adding a car rental to the trip.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        company: { type: 'string', description: 'Rental car company name, e.g. "Hertz".' },
+        carClass: { type: 'string', description: 'Car class or type, e.g. "Compact SUV".' },
+        confirmationNumber: { type: 'string' },
+        pickupDate: { type: 'string', description: 'Date in YYYY-MM-DD format.' },
+        pickupTime: { type: 'string', description: 'Time in HH:MM format.' },
+        pickupLocation: { type: 'string', description: 'Pick-up location name or address.' },
+        dropoffDate: { type: 'string', description: 'Date in YYYY-MM-DD format.' },
+        dropoffTime: { type: 'string', description: 'Time in HH:MM format.' },
+        dropoffLocation: { type: 'string', description: 'Drop-off location name or address.' },
+        bookingStatus: { type: 'string', enum: ['unbooked', 'pending', 'confirmed'] },
+        cost: { type: 'number' },
+        currency: { type: 'string' },
+        notes: { type: 'string' },
+      },
+      required: ['company'],
+    },
+  },
+  {
+    name: 'propose_parking',
+    description: 'Propose adding a parking reservation to the trip.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        location: { type: 'string', description: 'Parking lot or garage name.' },
+        address: { type: 'string' },
+        startDate: { type: 'string', description: 'Date in YYYY-MM-DD format.' },
+        startTime: { type: 'string', description: 'Time in HH:MM format.' },
+        endDate: { type: 'string', description: 'Date in YYYY-MM-DD format.' },
+        endTime: { type: 'string', description: 'Time in HH:MM format.' },
+        confirmationNumber: { type: 'string' },
+        orderNumber: { type: 'string' },
+        vendor: { type: 'string', description: 'Vendor or booking service name.' },
+        bookingStatus: { type: 'string', enum: ['unbooked', 'pending', 'confirmed'] },
+        cost: { type: 'number' },
+        currency: { type: 'string' },
+        notes: { type: 'string' },
+      },
+      required: ['location'],
+    },
+  },
+  {
+    name: 'propose_transit',
+    description: 'Propose adding a transit booking (train, bus, ferry, etc.) to the trip.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        operator: { type: 'string', description: 'Transit operator or service name, e.g. "Amtrak" or "Eurostar".' },
+        transitType: { type: 'string', enum: ['train', 'bus', 'ferry', 'subway', 'shuttle', 'taxi', 'rideshare', 'other'] },
+        routeNumber: { type: 'string' },
+        fromLocation: { type: 'string', description: 'Departure station or stop.' },
+        toLocation: { type: 'string', description: 'Arrival station or stop.' },
+        departureDate: { type: 'string', description: 'Date in YYYY-MM-DD format.' },
+        departureTime: { type: 'string', description: 'Time in HH:MM format.' },
+        arrivalDate: { type: 'string' },
+        arrivalTime: { type: 'string' },
+        confirmationNumber: { type: 'string' },
+        seatInfo: { type: 'string', description: 'Seat or coach assignment.' },
+        bookingStatus: { type: 'string', enum: ['unbooked', 'pending', 'confirmed'] },
+        cost: { type: 'number' },
+        currency: { type: 'string' },
+        notes: { type: 'string' },
+      },
+      required: ['operator'],
     },
   },
 ];
@@ -163,6 +234,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   const flights = camelizeAll<Pick<TripFlight, 'airline' | 'flightNumber' | 'departureDate'>>(flightRows);
   const hotelRows = db.prepare('SELECT name, check_in_date, check_out_date FROM trip_hotels WHERE trip_id = ?').all(tripId) as Record<string, unknown>[];
   const hotels = camelizeAll<Pick<TripHotel, 'name' | 'checkInDate' | 'checkOutDate'>>(hotelRows);
+  const rentalCarRows = db.prepare('SELECT company, pickup_date, dropoff_date FROM trip_rental_cars WHERE trip_id = ?').all(tripId) as Record<string, unknown>[];
+  const rentalCars = camelizeAll<Pick<TripRentalCar, 'company' | 'pickupDate' | 'dropoffDate'>>(rentalCarRows);
+  const parkingRows = db.prepare('SELECT location, start_date, end_date FROM trip_parking WHERE trip_id = ?').all(tripId) as Record<string, unknown>[];
+  const parkingItems = camelizeAll<Pick<TripParking, 'location' | 'startDate' | 'endDate'>>(parkingRows);
+  const transitRows = db.prepare('SELECT operator, departure_date FROM trip_transit WHERE trip_id = ?').all(tripId) as Record<string, unknown>[];
+  const transitItems = camelizeAll<Pick<TripTransit, 'operator' | 'departureDate'>>(transitRows);
 
   // Build context for Claude
   const dayMap = days.map((d) => `  Day ${d.dayNumber} (${d.date}) — id: ${d.id}`).join('\n');
@@ -172,6 +249,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   }).join('\n');
   const existingFlights = flights.map((f) => `  - ${f.airline ?? ''} ${f.flightNumber ?? ''} on ${f.departureDate ?? ''}`).join('\n');
   const existingHotels = hotels.map((h) => `  - ${h.name} (${h.checkInDate ?? '?'} to ${h.checkOutDate ?? '?'})`).join('\n');
+  const existingRentalCars = rentalCars.map((c) => `  - ${c.company} (${c.pickupDate ?? '?'} to ${c.dropoffDate ?? '?'})`).join('\n');
+  const existingParking = parkingItems.map((p) => `  - ${p.location} (${p.startDate ?? '?'} to ${p.endDate ?? '?'})`).join('\n');
+  const existingTransit = transitItems.map((t) => `  - ${t.operator} on ${t.departureDate ?? '?'}`).join('\n');
 
   let emailContent = '';
   if (body.mode === 'email') {
@@ -209,6 +289,12 @@ Flights:
 ${existingFlights || '  (none yet)'}
 Hotels:
 ${existingHotels || '  (none yet)'}
+Rental Cars:
+${existingRentalCars || '  (none yet)'}
+Parking:
+${existingParking || '  (none yet)'}
+Transit:
+${existingTransit || '  (none yet)'}
 
 Your role: analyse the information provided and call the proposal tools for anything worth adding. Briefly narrate what you found and why you're proposing each item. Don't propose things already in the itinerary.`;
 
@@ -252,6 +338,12 @@ Your role: analyse the information provided and call the proposal tools for anyt
               proposal = { type: 'flight', ...input } as Proposal;
             } else if (block.name === 'propose_hotel') {
               proposal = { type: 'hotel', ...input } as Proposal;
+            } else if (block.name === 'propose_rental_car') {
+              proposal = { type: 'rental_car', ...input } as Proposal;
+            } else if (block.name === 'propose_parking') {
+              proposal = { type: 'parking', ...input } as Proposal;
+            } else if (block.name === 'propose_transit') {
+              proposal = { type: 'transit', ...input } as Proposal;
             }
 
             if (proposal) send({ type: 'proposal', proposal });

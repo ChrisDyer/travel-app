@@ -34,6 +34,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
   const [hotels, setHotels] = useState<TripHotel[]>(initialHotels);
   const [parking, setParking] = useState<TripParking[]>(initialParking);
   const [rentalCars, setRentalCars] = useState<TripRentalCar[]>(initialRentalCars);
+  const [transit, setTransit] = useState<TripTransit[]>(initialTransit);
   const [editingEvent, setEditingEvent] = useState<TripEvent | null>(null);
   const [addingToDay, setAddingToDay] = useState<TripDay | null>(null);
   const [editingFlight, setEditingFlight] = useState<TripFlight | null>(null);
@@ -161,6 +162,9 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
         onEventsAdded={(newEvents) => setEvents((prev) => [...prev, ...newEvents])}
         onFlightsAdded={(newFlights) => setFlights((prev) => [...prev, ...newFlights])}
         onHotelsAdded={(newHotels) => setHotels((prev) => [...prev, ...newHotels])}
+        onRentalCarsAdded={(newCars) => setRentalCars((prev) => [...prev, ...newCars])}
+        onParkingAdded={(newParking) => setParking((prev) => [...prev, ...newParking])}
+        onTransitAdded={(newTransit) => setTransit((prev) => [...prev, ...newTransit])}
       />
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-[640px_1fr] gap-8 items-start">
@@ -186,7 +190,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
             onHotelsChange={setHotels}
             onParkingChange={setParking}
             onRentalCarsChange={setRentalCars}
-            onTransitChange={() => {}}
+            onTransitChange={setTransit}
           />
 
           <CancellationDeadlines
@@ -195,7 +199,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
             flights={flights}
             rentalCars={rentalCars}
             parking={parking}
-            transit={initialTransit}
+            transit={transit}
           />
 
           <TripCostSummary
@@ -204,7 +208,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
             hotels={hotels}
             parking={parking}
             rentalCars={rentalCars}
-            transit={initialTransit}
+            transit={transit}
           />
         </div>
 

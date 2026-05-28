@@ -248,4 +248,57 @@ export interface ProposedHotel {
   notes?: string | null;
 }
 
-export type Proposal = ProposedEvent | ProposedFlight | ProposedHotel;
+export interface ProposedRentalCar {
+  type: 'rental_car';
+  company: string;
+  carClass?: string | null;
+  confirmationNumber?: string | null;
+  pickupDate?: string | null;
+  pickupTime?: string | null;
+  pickupLocation?: string | null;
+  dropoffDate?: string | null;
+  dropoffTime?: string | null;
+  dropoffLocation?: string | null;
+  bookingStatus?: BookingStatus;
+  cost?: number | null;
+  currency?: string | null;
+  notes?: string | null;
+}
+
+export interface ProposedParking {
+  type: 'parking';
+  location: string;
+  address?: string | null;
+  startDate?: string | null;
+  startTime?: string | null;
+  endDate?: string | null;
+  endTime?: string | null;
+  confirmationNumber?: string | null;
+  orderNumber?: string | null;
+  vendor?: string | null;
+  bookingStatus?: BookingStatus;
+  cost?: number | null;
+  currency?: string | null;
+  notes?: string | null;
+}
+
+export interface ProposedTransit {
+  type: 'transit';
+  operator: string;
+  transitType?: TransitType | null;
+  routeNumber?: string | null;
+  fromLocation?: string | null;
+  toLocation?: string | null;
+  departureDate?: string | null;
+  departureTime?: string | null;
+  arrivalDate?: string | null;
+  arrivalTime?: string | null;
+  confirmationNumber?: string | null;
+  seatInfo?: string | null;
+  bookingStatus?: BookingStatus;
+  cost?: number | null;
+  currency?: string | null;
+  notes?: string | null;
+}
+
+export type Proposal = ProposedEvent | ProposedFlight | ProposedHotel | ProposedRentalCar | ProposedParking | ProposedTransit;

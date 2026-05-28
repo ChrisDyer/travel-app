@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import type { TripDay, TripEvent, TripFlight, TripHotel, Proposal, ProposedEvent, ProposedFlight, ProposedHotel } from '@/types/travel';
+import type { TripDay, TripEvent, TripFlight, TripHotel, TripRentalCar, TripParking, TripTransit, Proposal, ProposedEvent, ProposedFlight, ProposedHotel, ProposedRentalCar, ProposedParking, ProposedTransit } from '@/types/travel';
 
 interface TripAssistantProps {
   tripId: string;
@@ -10,6 +10,9 @@ interface TripAssistantProps {
   onEventsAdded: (events: TripEvent[]) => void;
   onFlightsAdded: (flights: TripFlight[]) => void;
   onHotelsAdded: (hotels: TripHotel[]) => void;
+  onRentalCarsAdded: (rentalCars: TripRentalCar[]) => void;
+  onParkingAdded: (parking: TripParking[]) => void;
+  onTransitAdded: (transit: TripTransit[]) => void;
 }
 
 interface ProposalCard {
@@ -24,7 +27,7 @@ interface HistoryTurn {
   content: string;
 }
 
-export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onHotelsAdded }: TripAssistantProps) {
+export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onHotelsAdded, onRentalCarsAdded, onParkingAdded, onTransitAdded }: TripAssistantProps) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'email' | 'brainstorm'>('email');
   const [query, setQuery] = useState('');
@@ -138,6 +141,9 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
                 ? '\n\n[Proposed: ' + proposalsRef.current.map((p) => {
                     if (p.type === 'event') return (p as ProposedEvent).title;
                     if (p.type === 'flight') return [(p as ProposedFlight).airline, (p as ProposedFlight).flightNumber].filter(Boolean).join(' ') || 'Flight';
+                    if (p.type === 'rental_car') return (p as ProposedRentalCar).company;
+                    if (p.type === 'parking') return (p as ProposedParking).location;
+                    if (p.type === 'transit') return (p as ProposedTransit).operator;
                     return (p as ProposedHotel).name;
                   }).join(', ') + ']'
                 : '';
@@ -194,10 +200,13 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
         setApplyError(data.error ?? 'Failed to add items. Please try again.');
         return;
       }
-      const result = await res.json() as { addedEvents: TripEvent[]; addedFlights: TripFlight[]; addedHotels: TripHotel[] };
+      const result = await res.json() as { addedEvents: TripEvent[]; addedFlights: TripFlight[]; addedHotels: TripHotel[]; addedRentalCars: TripRentalCar[]; addedParking: TripParking[]; addedTransit: TripTransit[] };
       if (result.addedEvents.length) onEventsAdded(result.addedEvents);
       if (result.addedFlights.length) onFlightsAdded(result.addedFlights);
       if (result.addedHotels.length) onHotelsAdded(result.addedHotels);
+      if (result.addedRentalCars?.length) onRentalCarsAdded(result.addedRentalCars);
+      if (result.addedParking?.length) onParkingAdded(result.addedParking);
+      if (result.addedTransit?.length) onTransitAdded(result.addedTransit);
       setCards((prev) => prev.filter((c) => !c.checked));
     } catch {
       setApplyError('Connection error. Please try again.');
@@ -388,7 +397,7 @@ interface ProposalCardUIProps {
 
 function ProposalCardUI({ card, dayLabel, onToggle, onEdit }: ProposalCardUIProps) {
   const p = { ...card.proposal, ...card.edits } as Proposal;
-  const typeLabels: Record<string, string> = { event: '📅 Event', flight: '✈️ Flight', hotel: '🏨 Hotel' };
+  const typeLabels: Record<string, string> = { event: '📅 Event', flight: '✈️ Flight', hotel: '🏨 Hotel', rental_car: '🚗 Car Rental', parking: '🅿️ Parking', transit: '🚌 Transit' };
 
   return (
     <div className={`border rounded-lg p-4 transition-all ${card.checked ? 'border-stone-400 bg-white' : 'border-stone-200 bg-stone-50 opacity-60'}`}>
@@ -408,6 +417,9 @@ function ProposalCardUI({ card, dayLabel, onToggle, onEdit }: ProposalCardUIProp
           {p.type === 'event' && <EventProposalFields p={p as ProposedEvent} dayLabel={dayLabel} onEdit={onEdit} />}
           {p.type === 'flight' && <FlightProposalFields p={p as ProposedFlight} onEdit={onEdit} />}
           {p.type === 'hotel' && <HotelProposalFields p={p as ProposedHotel} onEdit={onEdit} />}
+          {p.type === 'rental_car' && <RentalCarProposalFields p={p as ProposedRentalCar} onEdit={onEdit} />}
+          {p.type === 'parking' && <ParkingProposalFields p={p as ProposedParking} onEdit={onEdit} />}
+          {p.type === 'transit' && <TransitProposalFields p={p as ProposedTransit} onEdit={onEdit} />}
         </div>
       </div>
     </div>
@@ -428,6 +440,25 @@ function Field({ label, value, field, onEdit }: { label: string; value?: string 
   );
 }
 
+function SelectField({ label, value, field, options, onEdit }: { label: string; value?: string | null; field: string; options: string[]; onEdit: (f: string, v: string) => void }) {
+  return (
+    <div className="flex gap-2 items-center text-sm mb-1">
+      <span className="text-stone-400 w-24 shrink-0">{label}</span>
+      <select
+        defaultValue={value ?? ''}
+        onChange={(e) => onEdit(field, e.target.value)}
+        className="flex-1 border-b border-stone-200 focus:border-stone-400 focus:outline-none px-1 py-0.5 text-stone-800 bg-transparent text-sm"
+      >
+        <option value="">—</option>
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+}
+
+const BOOKING_STATUS_OPTIONS = ['unbooked', 'pending', 'confirmed'];
+const TRANSIT_TYPE_OPTIONS = ['train', 'bus', 'ferry', 'subway', 'shuttle', 'taxi', 'rideshare', 'other'];
+
 function EventProposalFields({ p, dayLabel, onEdit }: { p: ProposedEvent; dayLabel: (id: string) => string; onEdit: (f: string, v: string) => void }) {
   return (
     <>
@@ -436,11 +467,15 @@ function EventProposalFields({ p, dayLabel, onEdit }: { p: ProposedEvent; dayLab
         <span className="text-stone-400 w-24 shrink-0">Day</span>
         <span className="text-stone-600 text-xs">{dayLabel(p.tripDayId)}</span>
       </div>
-      {p.startTime && <Field label="Start" value={p.startTime} field="startTime" onEdit={onEdit} />}
-      {p.location && <Field label="Location" value={p.location} field="location" onEdit={onEdit} />}
-      {p.confirmationNumber && <Field label="Conf #" value={p.confirmationNumber} field="confirmationNumber" onEdit={onEdit} />}
-      {p.notes && <Field label="Notes" value={p.notes} field="notes" onEdit={onEdit} />}
-      {p.cost != null && <Field label="Cost" value={String(p.cost)} field="cost" onEdit={onEdit} />}
+      <Field label="Category" value={p.category} field="category" onEdit={onEdit} />
+      <Field label="Start" value={p.startTime ?? null} field="startTime" onEdit={onEdit} />
+      <Field label="End" value={p.endTime ?? null} field="endTime" onEdit={onEdit} />
+      <Field label="Location" value={p.location ?? null} field="location" onEdit={onEdit} />
+      <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
+      <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
+      <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
+      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
     </>
   );
 }
@@ -448,13 +483,18 @@ function EventProposalFields({ p, dayLabel, onEdit }: { p: ProposedEvent; dayLab
 function FlightProposalFields({ p, onEdit }: { p: ProposedFlight; onEdit: (f: string, v: string) => void }) {
   return (
     <>
-      {p.airline && <Field label="Airline" value={p.airline} field="airline" onEdit={onEdit} />}
-      {p.flightNumber && <Field label="Flight #" value={p.flightNumber} field="flightNumber" onEdit={onEdit} />}
-      {p.departureAirport && <Field label="From" value={p.departureAirport} field="departureAirport" onEdit={onEdit} />}
-      {p.arrivalAirport && <Field label="To" value={p.arrivalAirport} field="arrivalAirport" onEdit={onEdit} />}
-      {p.departureDate && <Field label="Departs" value={`${p.departureDate} ${p.departureTime ?? ''}`} field="departureDate" onEdit={onEdit} />}
-      {p.confirmationNumber && <Field label="Conf #" value={p.confirmationNumber} field="confirmationNumber" onEdit={onEdit} />}
-      {p.seats && <Field label="Seats" value={p.seats} field="seats" onEdit={onEdit} />}
+      <Field label="Airline" value={p.airline ?? null} field="airline" onEdit={onEdit} />
+      <Field label="Flight #" value={p.flightNumber ?? null} field="flightNumber" onEdit={onEdit} />
+      <Field label="From" value={p.departureAirport ?? null} field="departureAirport" onEdit={onEdit} />
+      <Field label="To" value={p.arrivalAirport ?? null} field="arrivalAirport" onEdit={onEdit} />
+      <Field label="Departs" value={p.departureDate ? `${p.departureDate} ${p.departureTime ?? ''}`.trim() : null} field="departureDate" onEdit={onEdit} />
+      <Field label="Arrives" value={p.arrivalDate ? `${p.arrivalDate} ${p.arrivalTime ?? ''}`.trim() : null} field="arrivalDate" onEdit={onEdit} />
+      <Field label="Trip Type" value={p.tripType ?? null} field="tripType" onEdit={onEdit} />
+      <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
+      <Field label="Seats" value={p.seats ?? null} field="seats" onEdit={onEdit} />
+      <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
+      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
     </>
   );
 }
@@ -463,12 +503,71 @@ function HotelProposalFields({ p, onEdit }: { p: ProposedHotel; onEdit: (f: stri
   return (
     <>
       <Field label="Hotel" value={p.name} field="name" onEdit={onEdit} />
-      {p.address && <Field label="Address" value={p.address} field="address" onEdit={onEdit} />}
-      {p.checkInDate && <Field label="Check-in" value={`${p.checkInDate} ${p.checkInTime ?? ''}`} field="checkInDate" onEdit={onEdit} />}
-      {p.checkOutDate && <Field label="Check-out" value={`${p.checkOutDate} ${p.checkOutTime ?? ''}`} field="checkOutDate" onEdit={onEdit} />}
-      {p.confirmationNumber && <Field label="Conf #" value={p.confirmationNumber} field="confirmationNumber" onEdit={onEdit} />}
-      {p.roomType && <Field label="Room" value={p.roomType} field="roomType" onEdit={onEdit} />}
-      {p.notes && <Field label="Notes" value={p.notes} field="notes" onEdit={onEdit} />}
+      <Field label="Address" value={p.address ?? null} field="address" onEdit={onEdit} />
+      <Field label="Check-in" value={p.checkInDate ? `${p.checkInDate} ${p.checkInTime ?? ''}`.trim() : null} field="checkInDate" onEdit={onEdit} />
+      <Field label="Check-out" value={p.checkOutDate ? `${p.checkOutDate} ${p.checkOutTime ?? ''}`.trim() : null} field="checkOutDate" onEdit={onEdit} />
+      <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
+      <Field label="Room" value={p.roomType ?? null} field="roomType" onEdit={onEdit} />
+      <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
+      <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
+      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
+    </>
+  );
+}
+
+function RentalCarProposalFields({ p, onEdit }: { p: ProposedRentalCar; onEdit: (f: string, v: string) => void }) {
+  return (
+    <>
+      <Field label="Company" value={p.company} field="company" onEdit={onEdit} />
+      <Field label="Car Class" value={p.carClass ?? null} field="carClass" onEdit={onEdit} />
+      <Field label="Pick-up" value={p.pickupDate ? `${p.pickupDate} ${p.pickupTime ?? ''}`.trim() : null} field="pickupDate" onEdit={onEdit} />
+      <Field label="Pick-up at" value={p.pickupLocation ?? null} field="pickupLocation" onEdit={onEdit} />
+      <Field label="Drop-off" value={p.dropoffDate ? `${p.dropoffDate} ${p.dropoffTime ?? ''}`.trim() : null} field="dropoffDate" onEdit={onEdit} />
+      <Field label="Drop-off at" value={p.dropoffLocation ?? null} field="dropoffLocation" onEdit={onEdit} />
+      <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
+      <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
+      <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
+      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
+    </>
+  );
+}
+
+function ParkingProposalFields({ p, onEdit }: { p: ProposedParking; onEdit: (f: string, v: string) => void }) {
+  return (
+    <>
+      <Field label="Location" value={p.location} field="location" onEdit={onEdit} />
+      <Field label="Address" value={p.address ?? null} field="address" onEdit={onEdit} />
+      <Field label="Vendor" value={p.vendor ?? null} field="vendor" onEdit={onEdit} />
+      <Field label="Start" value={p.startDate ? `${p.startDate} ${p.startTime ?? ''}`.trim() : null} field="startDate" onEdit={onEdit} />
+      <Field label="End" value={p.endDate ? `${p.endDate} ${p.endTime ?? ''}`.trim() : null} field="endDate" onEdit={onEdit} />
+      <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
+      <Field label="Order #" value={p.orderNumber ?? null} field="orderNumber" onEdit={onEdit} />
+      <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
+      <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
+      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
+    </>
+  );
+}
+
+function TransitProposalFields({ p, onEdit }: { p: ProposedTransit; onEdit: (f: string, v: string) => void }) {
+  return (
+    <>
+      <Field label="Operator" value={p.operator} field="operator" onEdit={onEdit} />
+      <SelectField label="Type" value={p.transitType ?? null} field="transitType" options={TRANSIT_TYPE_OPTIONS} onEdit={onEdit} />
+      <Field label="Route" value={p.routeNumber ?? null} field="routeNumber" onEdit={onEdit} />
+      <Field label="From" value={p.fromLocation ?? null} field="fromLocation" onEdit={onEdit} />
+      <Field label="To" value={p.toLocation ?? null} field="toLocation" onEdit={onEdit} />
+      <Field label="Departs" value={p.departureDate ? `${p.departureDate} ${p.departureTime ?? ''}`.trim() : null} field="departureDate" onEdit={onEdit} />
+      <Field label="Arrives" value={p.arrivalDate ? `${p.arrivalDate} ${p.arrivalTime ?? ''}`.trim() : null} field="arrivalDate" onEdit={onEdit} />
+      <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
+      <Field label="Seat" value={p.seatInfo ?? null} field="seatInfo" onEdit={onEdit} />
+      <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
+      <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
+      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
     </>
   );
 }
