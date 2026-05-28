@@ -184,21 +184,44 @@ interface GmailBodyPart {
   parts?: GmailBodyPart[];
 }
 
+function decodeBase64(data: string): string {
+  return Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 function extractTextBody(payload: GmailBodyPart): string {
-  if (payload.body?.data) {
-    return Buffer.from(payload.body.data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
-  }
-  for (const part of payload.parts ?? []) {
-    if (part.mimeType === 'text/plain' && part.body?.data) {
-      return Buffer.from(part.body.data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
-    }
-  }
-  for (const part of payload.parts ?? []) {
-    if (part.mimeType === 'text/html' && part.body?.data) {
-      return Buffer.from(part.body.data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
-    }
-  }
+  // Prefer text/plain — search recursively through the full MIME tree
+  const plain = findPart(payload, 'text/plain');
+  if (plain) return decodeBase64(plain);
+
+  // Fall back to text/html, stripping tags so Claude gets readable text
+  const html = findPart(payload, 'text/html');
+  if (html) return stripHtml(decodeBase64(html));
+
   return '';
+}
+
+function findPart(part: GmailBodyPart, mimeType: string): string | null {
+  if (part.mimeType === mimeType && part.body?.data) return part.body.data;
+  for (const child of part.parts ?? []) {
+    const found = findPart(child, mimeType);
+    if (found) return found;
+  }
+  return null;
 }
 
 async function fetchTravelEmails(accessToken: string): Promise<{ emails: string; labelMissing: boolean }> {
@@ -228,7 +251,7 @@ async function fetchTravelEmails(accessToken: string): Promise<{ emails: string;
     const subject = hdrs.find((h) => h.name === 'Subject')?.value ?? '';
     const from = hdrs.find((h) => h.name === 'From')?.value ?? '';
     const date = hdrs.find((h) => h.name === 'Date')?.value ?? '';
-    const body = msgData.payload ? extractTextBody(msgData.payload).slice(0, 3000) : '';
+    const body = msgData.payload ? extractTextBody(msgData.payload).slice(0, 6000) : '';
     emailTexts.push(`From: ${from}\nDate: ${date}\nSubject: ${subject}\n---\n${body}`);
   }
 
