@@ -178,6 +178,29 @@ async function getTravelLabelId(accessToken: string): Promise<string | null> {
   return data.labels?.find((l) => l.name === TRAVEL_LABEL_NAME)?.id ?? null;
 }
 
+interface GmailBodyPart {
+  mimeType?: string;
+  body?: { data?: string };
+  parts?: GmailBodyPart[];
+}
+
+function extractTextBody(payload: GmailBodyPart): string {
+  if (payload.body?.data) {
+    return Buffer.from(payload.body.data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
+  }
+  for (const part of payload.parts ?? []) {
+    if (part.mimeType === 'text/plain' && part.body?.data) {
+      return Buffer.from(part.body.data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
+    }
+  }
+  for (const part of payload.parts ?? []) {
+    if (part.mimeType === 'text/html' && part.body?.data) {
+      return Buffer.from(part.body.data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
+    }
+  }
+  return '';
+}
+
 async function fetchTravelEmails(accessToken: string): Promise<{ emails: string; labelMissing: boolean }> {
   const labelId = await getTravelLabelId(accessToken);
   if (!labelId) return { emails: '', labelMissing: true };
@@ -194,22 +217,22 @@ async function fetchTravelEmails(accessToken: string): Promise<{ emails: string;
   const emailTexts: string[] = [];
   for (const msg of messages.slice(0, 15)) {
     const msgRes = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     if (!msgRes.ok) continue;
     const msgData = await msgRes.json() as {
-      snippet: string;
-      payload?: { headers?: { name: string; value: string }[] };
+      payload?: GmailBodyPart & { headers?: { name: string; value: string }[] };
     };
     const hdrs = msgData.payload?.headers ?? [];
     const subject = hdrs.find((h) => h.name === 'Subject')?.value ?? '';
     const from = hdrs.find((h) => h.name === 'From')?.value ?? '';
     const date = hdrs.find((h) => h.name === 'Date')?.value ?? '';
-    emailTexts.push(`From: ${from}\nDate: ${date}\nSubject: ${subject}\nSnippet: ${msgData.snippet}`);
+    const body = msgData.payload ? extractTextBody(msgData.payload).slice(0, 3000) : '';
+    emailTexts.push(`From: ${from}\nDate: ${date}\nSubject: ${subject}\n---\n${body}`);
   }
 
-  return { emails: emailTexts.join('\n\n---\n\n'), labelMissing: false };
+  return { emails: emailTexts.join('\n\n===\n\n'), labelMissing: false };
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ tripId: string }> }) {

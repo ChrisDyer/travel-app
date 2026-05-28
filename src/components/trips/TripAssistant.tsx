@@ -440,6 +440,50 @@ function Field({ label, value, field, onEdit }: { label: string; value?: string 
   );
 }
 
+function DateField({ label, value, field, onEdit }: { label: string; value?: string | null; field: string; onEdit: (f: string, v: string) => void }) {
+  return (
+    <div className="flex gap-2 items-center text-sm mb-1">
+      <span className="text-stone-400 w-24 shrink-0">{label}</span>
+      <input
+        type="date"
+        defaultValue={value ?? ''}
+        onBlur={(e) => onEdit(field, e.target.value)}
+        className="flex-1 border-b border-stone-200 focus:border-stone-400 focus:outline-none px-1 py-0.5 text-stone-800 bg-transparent"
+      />
+    </div>
+  );
+}
+
+function TimeField({ label, value, field, onEdit }: { label: string; value?: string | null; field: string; onEdit: (f: string, v: string) => void }) {
+  return (
+    <div className="flex gap-2 items-center text-sm mb-1">
+      <span className="text-stone-400 w-24 shrink-0">{label}</span>
+      <input
+        type="time"
+        defaultValue={value ?? ''}
+        onBlur={(e) => onEdit(field, e.target.value)}
+        className="flex-1 border-b border-stone-200 focus:border-stone-400 focus:outline-none px-1 py-0.5 text-stone-800 bg-transparent"
+      />
+    </div>
+  );
+}
+
+function NumberField({ label, value, field, onEdit }: { label: string; value?: string | null; field: string; onEdit: (f: string, v: string) => void }) {
+  return (
+    <div className="flex gap-2 items-center text-sm mb-1">
+      <span className="text-stone-400 w-24 shrink-0">{label}</span>
+      <input
+        type="number"
+        step="0.01"
+        min="0"
+        defaultValue={value ?? ''}
+        onBlur={(e) => onEdit(field, e.target.value)}
+        className="flex-1 border-b border-stone-200 focus:border-stone-400 focus:outline-none px-1 py-0.5 text-stone-800 bg-transparent"
+      />
+    </div>
+  );
+}
+
 function SelectField({ label, value, field, options, onEdit }: { label: string; value?: string | null; field: string; options: string[]; onEdit: (f: string, v: string) => void }) {
   return (
     <div className="flex gap-2 items-center text-sm mb-1">
@@ -468,13 +512,13 @@ function EventProposalFields({ p, dayLabel, onEdit }: { p: ProposedEvent; dayLab
         <span className="text-stone-600 text-xs">{dayLabel(p.tripDayId)}</span>
       </div>
       <Field label="Category" value={p.category} field="category" onEdit={onEdit} />
-      <Field label="Start" value={p.startTime ?? null} field="startTime" onEdit={onEdit} />
-      <Field label="End" value={p.endTime ?? null} field="endTime" onEdit={onEdit} />
+      <TimeField label="Start" value={p.startTime ?? null} field="startTime" onEdit={onEdit} />
+      <TimeField label="End" value={p.endTime ?? null} field="endTime" onEdit={onEdit} />
       <Field label="Location" value={p.location ?? null} field="location" onEdit={onEdit} />
       <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
       <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
       <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
-      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <NumberField label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
       <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
     </>
   );
@@ -487,13 +531,15 @@ function FlightProposalFields({ p, onEdit }: { p: ProposedFlight; onEdit: (f: st
       <Field label="Flight #" value={p.flightNumber ?? null} field="flightNumber" onEdit={onEdit} />
       <Field label="From" value={p.departureAirport ?? null} field="departureAirport" onEdit={onEdit} />
       <Field label="To" value={p.arrivalAirport ?? null} field="arrivalAirport" onEdit={onEdit} />
-      <Field label="Departs" value={p.departureDate ? `${p.departureDate} ${p.departureTime ?? ''}`.trim() : null} field="departureDate" onEdit={onEdit} />
-      <Field label="Arrives" value={p.arrivalDate ? `${p.arrivalDate} ${p.arrivalTime ?? ''}`.trim() : null} field="arrivalDate" onEdit={onEdit} />
+      <DateField label="Departs" value={p.departureDate ?? null} field="departureDate" onEdit={onEdit} />
+      <TimeField label="Dep. time" value={p.departureTime ?? null} field="departureTime" onEdit={onEdit} />
+      <DateField label="Arrives" value={p.arrivalDate ?? null} field="arrivalDate" onEdit={onEdit} />
+      <TimeField label="Arr. time" value={p.arrivalTime ?? null} field="arrivalTime" onEdit={onEdit} />
       <Field label="Trip Type" value={p.tripType ?? null} field="tripType" onEdit={onEdit} />
       <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
       <Field label="Seats" value={p.seats ?? null} field="seats" onEdit={onEdit} />
       <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
-      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <NumberField label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
       <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
     </>
   );
@@ -504,13 +550,15 @@ function HotelProposalFields({ p, onEdit }: { p: ProposedHotel; onEdit: (f: stri
     <>
       <Field label="Hotel" value={p.name} field="name" onEdit={onEdit} />
       <Field label="Address" value={p.address ?? null} field="address" onEdit={onEdit} />
-      <Field label="Check-in" value={p.checkInDate ? `${p.checkInDate} ${p.checkInTime ?? ''}`.trim() : null} field="checkInDate" onEdit={onEdit} />
-      <Field label="Check-out" value={p.checkOutDate ? `${p.checkOutDate} ${p.checkOutTime ?? ''}`.trim() : null} field="checkOutDate" onEdit={onEdit} />
+      <DateField label="Check-in" value={p.checkInDate ?? null} field="checkInDate" onEdit={onEdit} />
+      <TimeField label="Check-in time" value={p.checkInTime ?? null} field="checkInTime" onEdit={onEdit} />
+      <DateField label="Check-out" value={p.checkOutDate ?? null} field="checkOutDate" onEdit={onEdit} />
+      <TimeField label="Check-out time" value={p.checkOutTime ?? null} field="checkOutTime" onEdit={onEdit} />
       <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
       <Field label="Room" value={p.roomType ?? null} field="roomType" onEdit={onEdit} />
       <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
       <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
-      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <NumberField label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
       <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
     </>
   );
@@ -521,14 +569,16 @@ function RentalCarProposalFields({ p, onEdit }: { p: ProposedRentalCar; onEdit: 
     <>
       <Field label="Company" value={p.company} field="company" onEdit={onEdit} />
       <Field label="Car Class" value={p.carClass ?? null} field="carClass" onEdit={onEdit} />
-      <Field label="Pick-up" value={p.pickupDate ? `${p.pickupDate} ${p.pickupTime ?? ''}`.trim() : null} field="pickupDate" onEdit={onEdit} />
+      <DateField label="Pick-up date" value={p.pickupDate ?? null} field="pickupDate" onEdit={onEdit} />
+      <TimeField label="Pick-up time" value={p.pickupTime ?? null} field="pickupTime" onEdit={onEdit} />
       <Field label="Pick-up at" value={p.pickupLocation ?? null} field="pickupLocation" onEdit={onEdit} />
-      <Field label="Drop-off" value={p.dropoffDate ? `${p.dropoffDate} ${p.dropoffTime ?? ''}`.trim() : null} field="dropoffDate" onEdit={onEdit} />
+      <DateField label="Drop-off date" value={p.dropoffDate ?? null} field="dropoffDate" onEdit={onEdit} />
+      <TimeField label="Drop-off time" value={p.dropoffTime ?? null} field="dropoffTime" onEdit={onEdit} />
       <Field label="Drop-off at" value={p.dropoffLocation ?? null} field="dropoffLocation" onEdit={onEdit} />
       <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
       <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
       <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
-      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <NumberField label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
       <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
     </>
   );
@@ -540,13 +590,15 @@ function ParkingProposalFields({ p, onEdit }: { p: ProposedParking; onEdit: (f: 
       <Field label="Location" value={p.location} field="location" onEdit={onEdit} />
       <Field label="Address" value={p.address ?? null} field="address" onEdit={onEdit} />
       <Field label="Vendor" value={p.vendor ?? null} field="vendor" onEdit={onEdit} />
-      <Field label="Start" value={p.startDate ? `${p.startDate} ${p.startTime ?? ''}`.trim() : null} field="startDate" onEdit={onEdit} />
-      <Field label="End" value={p.endDate ? `${p.endDate} ${p.endTime ?? ''}`.trim() : null} field="endDate" onEdit={onEdit} />
+      <DateField label="Start date" value={p.startDate ?? null} field="startDate" onEdit={onEdit} />
+      <TimeField label="Start time" value={p.startTime ?? null} field="startTime" onEdit={onEdit} />
+      <DateField label="End date" value={p.endDate ?? null} field="endDate" onEdit={onEdit} />
+      <TimeField label="End time" value={p.endTime ?? null} field="endTime" onEdit={onEdit} />
       <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
       <Field label="Order #" value={p.orderNumber ?? null} field="orderNumber" onEdit={onEdit} />
       <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
       <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
-      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <NumberField label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
       <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
     </>
   );
@@ -560,13 +612,15 @@ function TransitProposalFields({ p, onEdit }: { p: ProposedTransit; onEdit: (f: 
       <Field label="Route" value={p.routeNumber ?? null} field="routeNumber" onEdit={onEdit} />
       <Field label="From" value={p.fromLocation ?? null} field="fromLocation" onEdit={onEdit} />
       <Field label="To" value={p.toLocation ?? null} field="toLocation" onEdit={onEdit} />
-      <Field label="Departs" value={p.departureDate ? `${p.departureDate} ${p.departureTime ?? ''}`.trim() : null} field="departureDate" onEdit={onEdit} />
-      <Field label="Arrives" value={p.arrivalDate ? `${p.arrivalDate} ${p.arrivalTime ?? ''}`.trim() : null} field="arrivalDate" onEdit={onEdit} />
+      <DateField label="Departs" value={p.departureDate ?? null} field="departureDate" onEdit={onEdit} />
+      <TimeField label="Dep. time" value={p.departureTime ?? null} field="departureTime" onEdit={onEdit} />
+      <DateField label="Arrives" value={p.arrivalDate ?? null} field="arrivalDate" onEdit={onEdit} />
+      <TimeField label="Arr. time" value={p.arrivalTime ?? null} field="arrivalTime" onEdit={onEdit} />
       <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
       <Field label="Seat" value={p.seatInfo ?? null} field="seatInfo" onEdit={onEdit} />
       <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
       <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
-      <Field label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
+      <NumberField label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
       <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
     </>
   );
