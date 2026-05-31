@@ -50,3 +50,6 @@ public/trip-photos/
 
 # claude code
 .claude/
+
+# deployment docs (kept locally, not in public repo)
+DEPLOY.md
