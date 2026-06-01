@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Primary auth is Cloudflare Access (Google SSO) in front of the whole site. This is a
-// defense-in-depth check: in production, every request must carry the identity header
-// Cloudflare injects. If it's absent, Cloudflare was bypassed or misconfigured, so we
-// refuse rather than serve. Local dev (no Cloudflare) is left open.
+// Primary auth is Cloudflare Access (Google SSO) in front of the whole site. This is an
+// optional defense-in-depth check: in production it also requires the identity header
+// Cloudflare injects. Many Access setups don't forward that header to the origin, so set
+// ALLOW_NO_ACCESS_HEADER=1 to disable this layer (same flag the other apps use) and rely
+// on Cloudflare Access alone. Local dev (no Cloudflare) is always left open.
 export function proxy(request: NextRequest) {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_NO_ACCESS_HEADER !== '1') {
     const email = request.headers.get('cf-access-authenticated-user-email');
     // Allow same-VPS server-to-server calls (e.g. the homepage dashboard) that present
     // the shared internal token instead of going through Cloudflare Access.
