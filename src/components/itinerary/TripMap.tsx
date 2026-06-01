@@ -95,11 +95,13 @@ export function TripMap({ locations, activeLocations, selectedDate, onClear }: T
   const displayPins = activeAddresses
     ? pins.filter((p) => activeAddresses.has(p.address))
     : pins;
+  const visibleActivePin = activePin && displayPins.some((p) => p === activePin)
+    ? activePin
+    : null;
 
   useEffect(() => {
     if (activeLocations !== undefined) {
       fitPins(displayPins);
-      setActivePin(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLocations]);
@@ -154,14 +156,14 @@ export function TripMap({ locations, activeLocations, selectedDate, onClear }: T
                 onClick={() => setActivePin(pin)}
               />
             ))}
-            {activePin && (
+            {visibleActivePin && (
               <InfoWindow
-                position={{ lat: activePin.lat, lng: activePin.lng }}
+                position={{ lat: visibleActivePin.lat, lng: visibleActivePin.lng }}
                 onCloseClick={() => setActivePin(null)}
               >
                 <div className="text-sm font-medium text-stone-900">
-                  <span className="mr-1">{typeIcon[activePin.type]}</span>
-                  {activePin.title}
+                  <span className="mr-1">{typeIcon[visibleActivePin.type]}</span>
+                  {visibleActivePin.title}
                 </div>
               </InfoWindow>
             )}

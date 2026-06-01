@@ -88,10 +88,8 @@ export function EventCard({ event, onEdit }: EventCardProps) {
               )}
               {event.cancellationDeadline && (() => {
                 const deadline = new Date(event.cancellationDeadline + 'T00:00:00');
-                const daysLeft = Math.ceil((deadline.getTime() - Date.now()) / 86400000);
                 const label = deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                const color = daysLeft <= 7 ? 'text-red-500' : daysLeft <= 14 ? 'text-amber-500' : 'text-stone-400';
-                return <p className={`text-xs mt-0.5 ${color}`}>Cancel by {label}</p>;
+                return <p className="text-xs mt-0.5 text-stone-400">Cancel by {label}</p>;
               })()}
               {event.notes && (
                 <p className="text-sm text-stone-500 mt-1 line-clamp-2">{event.notes}</p>
