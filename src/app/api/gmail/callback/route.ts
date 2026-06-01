@@ -1,14 +1,52 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { db } from '@/db';
 import { getUserId } from '@/lib/auth';
+
+const STATE_COOKIE = 'gmail_oauth_state';
+
+function sanitizeReturnTo(raw: string): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/trips';
+  return raw;
+}
+
+// Parse the `nonce:encodedReturnTo` state produced by /api/gmail/auth.
+function parseState(state: string): { nonce: string; returnTo: string } {
+  const sep = state.indexOf(':');
+  if (sep < 0) return { nonce: '', returnTo: '/trips' };
+  const nonce = state.slice(0, sep);
+  let returnTo = '/trips';
+  try {
+    returnTo = sanitizeReturnTo(decodeURIComponent(state.slice(sep + 1)));
+  } catch {
+    returnTo = '/trips';
+  }
+  return { nonce, returnTo };
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const returnTo = searchParams.get('state') ?? '/trips';
+  const { nonce: stateNonce, returnTo } = parseState(searchParams.get('state') ?? '');
+  const base = process.env.NEXT_PUBLIC_APP_URL;
+
+  const cookieStore = await cookies();
+  const cookieNonce = cookieStore.get(STATE_COOKIE)?.value;
+
+  // Always clear the one-time CSRF cookie, whatever the outcome.
+  const redirectTo = (url: string) => {
+    const res = NextResponse.redirect(url);
+    res.cookies.delete(STATE_COOKIE);
+    return res;
+  };
+
+  // CSRF: state nonce must match the cookie set when the flow began.
+  if (!stateNonce || !cookieNonce || stateNonce !== cookieNonce) {
+    return redirectTo(`${base}${returnTo}?gmailError=state_mismatch`);
+  }
 
   if (!code) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}${returnTo}?gmailError=no_code`);
+    return redirectTo(`${base}${returnTo}?gmailError=no_code`);
   }
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -24,7 +62,7 @@ export async function GET(request: Request) {
   });
 
   if (!tokenRes.ok) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}${returnTo}?gmailError=token_exchange_failed`);
+    return redirectTo(`${base}${returnTo}?gmailError=token_exchange_failed`);
   }
 
   const tokenData = await tokenRes.json() as {
@@ -53,5 +91,5 @@ export async function GET(request: Request) {
     tokenData.refresh_token ?? null, expiresAt, tokenData.scope, now, now
   );
 
-  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}${returnTo}?gmailConnected=1`);
+  return redirectTo(`${base}${returnTo}?gmailConnected=1`);
 }

@@ -133,6 +133,13 @@ See [RUNBOOK.md](RUNBOOK.md) for instructions on deploying to a VPS with nginx, 
 
 ## Authentication
 
-In local development, all requests run as a single `local` user — no login needed.
+This app is **single-user**. Every request runs as the `local` user (`getUserId()` in
+`src/lib/auth.ts`), both in local development and in production.
 
-In production, authentication is handled by [Cloudflare Access](https://www.cloudflare.com/zero-trust/products/access/) which gates the entire site using Google SSO. The app reads the `cf-access-authenticated-user-email` header to identify users, enabling each person to have their own separate trips.
+In production, access is gated by [Cloudflare Access](https://www.cloudflare.com/zero-trust/products/access/),
+which fronts the entire site with Google SSO and only admits the configured owner email.
+All trips therefore belong to the one allowed user.
+
+> The schema carries a `user_id` column (always `local`) so the app *could* be made
+> multi-user later by reading the `cf-access-authenticated-user-email` header in
+> `getUserId()` — but that is not wired up today. Don't rely on per-user data separation.

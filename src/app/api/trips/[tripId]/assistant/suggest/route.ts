@@ -6,6 +6,22 @@ import type { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripRentalCar, Tr
 
 const anthropic = new Anthropic();
 
+// Simple fixed-window rate limiter to cap AI spend against a runaway client loop.
+// Single-user app, so one global window suffices.
+const AI_MAX_PER_WINDOW = 15;
+const AI_WINDOW_MS = 60_000;
+let aiWindowStart = 0;
+let aiWindowCount = 0;
+function aiRateLimitOk(): boolean {
+  const now = Date.now();
+  if (now - aiWindowStart >= AI_WINDOW_MS) {
+    aiWindowStart = now;
+    aiWindowCount = 0;
+  }
+  aiWindowCount++;
+  return aiWindowCount <= AI_MAX_PER_WINDOW;
+}
+
 const TOOLS: Anthropic.Tool[] = [
   {
     name: 'propose_event',
@@ -261,6 +277,10 @@ async function fetchTravelEmails(accessToken: string): Promise<{ emails: string;
 export async function POST(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
   const userId = getUserId(request);
+
+  if (!aiRateLimitOk()) {
+    return NextResponse.json({ error: 'Rate limit exceeded — try again shortly.' }, { status: 429 });
+  }
 
   const tripRow = db.prepare('SELECT * FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId) as Record<string, unknown> | undefined;
   if (!tripRow) return NextResponse.json({ error: 'Not found' }, { status: 404 });

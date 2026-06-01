@@ -13,6 +13,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   const body = await request.json() as { proposals: Proposal[] };
   const now = new Date().toISOString();
 
+  // Event proposals carry a client-supplied tripDayId. Only accept days that actually
+  // belong to this trip, so a stale or tampered proposal can't attach an event to
+  // another trip's day.
+  const validDayIds = new Set(
+    (db.prepare('SELECT id FROM trip_days WHERE trip_id = ?').all(tripId) as { id: string }[])
+      .map((d) => d.id)
+  );
+  const skipped: { type: string; reason: string }[] = [];
+
   const addedEvents: TripEvent[] = [];
   const addedFlights: TripFlight[] = [];
   const addedHotels: TripHotel[] = [];
@@ -22,6 +31,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
 
   for (const proposal of body.proposals) {
     if (proposal.type === 'event') {
+      if (!proposal.tripDayId || !validDayIds.has(proposal.tripDayId)) {
+        skipped.push({ type: 'event', reason: 'invalid tripDayId for this trip' });
+        continue;
+      }
       const id = crypto.randomUUID();
       const row = db.prepare(`
         INSERT INTO trip_events (
@@ -140,5 +153,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
     }
   }
 
-  return NextResponse.json({ addedEvents, addedFlights, addedHotels, addedRentalCars, addedParking, addedTransit });
+  return NextResponse.json({ addedEvents, addedFlights, addedHotels, addedRentalCars, addedParking, addedTransit, skipped });
 }
