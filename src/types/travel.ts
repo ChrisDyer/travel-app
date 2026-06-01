@@ -23,6 +23,8 @@ export interface Trip {
   rentalCarNeeded: boolean;
   digestEnabled: boolean;
   digestDayOfWeek: number;
+  budget: number | null;
+  budgetCurrency: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }

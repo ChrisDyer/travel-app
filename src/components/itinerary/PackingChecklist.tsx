@@ -25,8 +25,25 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
   const [showGlobalAdd, setShowGlobalAdd] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [addError, setAddError] = useState('');
+  const [suggesting, setSuggesting] = useState(false);
   const addInputRef = useRef<HTMLInputElement>(null);
   const globalInputRef = useRef<HTMLInputElement>(null);
+
+  async function suggestItems() {
+    setSuggesting(true);
+    setAddError('');
+    try {
+      const res = await fetch(`/api/trips/${tripId}/packing/suggest`, { method: 'POST' });
+      if (!res.ok) { setAddError('Could not get suggestions. Please try again.'); return; }
+      const { added } = await res.json() as { added: PackingItem[] };
+      if (added?.length) setItems((prev) => [...prev, ...added]);
+      else setAddError('No new suggestions — your list looks complete.');
+    } catch {
+      setAddError('Could not get suggestions. Please try again.');
+    } finally {
+      setSuggesting(false);
+    }
+  }
 
   async function togglePacked(item: PackingItem) {
     const next = !item.isPacked;
@@ -93,9 +110,14 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
     <section className="mt-16 pt-10 border-t border-stone-200">
       <div className="flex items-baseline justify-between mb-6">
         <h2 className="text-2xl font-serif font-bold text-stone-900">Packing Checklist</h2>
-        {items.length > 0 && (
-          <span className="text-sm text-stone-400">{packed} / {items.length} packed</span>
-        )}
+        <div className="flex items-center gap-3">
+          {items.length > 0 && (
+            <span className="text-sm text-stone-400">{packed} / {items.length} packed</span>
+          )}
+          <Button variant="outline" size="sm" onClick={suggestItems} disabled={suggesting} className="no-print">
+            {suggesting ? 'Thinking…' : '✨ AI suggest'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">

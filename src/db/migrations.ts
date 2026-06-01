@@ -201,6 +201,13 @@ const migrations = [
       );
     `,
   },
+  {
+    name: '002_trip_budget',
+    sql: `
+      ALTER TABLE trips ADD COLUMN budget REAL;
+      ALTER TABLE trips ADD COLUMN budget_currency TEXT;
+    `,
+  },
 ];
 
 export function runMigrations(db: Database.Database): void {

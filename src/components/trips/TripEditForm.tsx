@@ -53,6 +53,8 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
       status: form.get('status'),
       travelMode,
       rentalCarNeeded,
+      budget: form.get('budget') ? Number(form.get('budget')) : null,
+      budgetCurrency: (form.get('budgetCurrency') as string)?.trim().toUpperCase() || null,
       notes: form.get('notes') || null,
     };
     const res = await fetch(`/api/trips/${trip.id}`, {
@@ -147,6 +149,17 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
               className="h-4 w-4 rounded border-stone-300 accent-blue-600"
             />
             <Label htmlFor="rentalCarNeeded" className="cursor-pointer">Rental car needed</Label>
+          </div>
+
+          <div className="grid grid-cols-[1fr_120px] gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="budget">Budget (optional)</Label>
+              <Input id="budget" name="budget" type="number" min="0" step="1" defaultValue={trip.budget ?? ''} placeholder="3000" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="budgetCurrency">Currency</Label>
+              <Input id="budgetCurrency" name="budgetCurrency" maxLength={3} defaultValue={trip.budgetCurrency ?? 'USD'} placeholder="USD" />
+            </div>
           </div>
 
           <div className="space-y-1.5">

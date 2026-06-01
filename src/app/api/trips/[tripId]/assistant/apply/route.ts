@@ -22,6 +22,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   );
   const skipped: { type: string; reason: string }[] = [];
 
+  // True if a matching booking already exists for this trip (dedup). Only called with the
+  // key fields present, so a `= ?` comparison is safe (no NULL-vs-NULL pitfalls).
+  const dup = (table: string, where: string, params: unknown[]) =>
+    !!db.prepare(`SELECT 1 FROM ${table} WHERE trip_id = ? AND ${where} LIMIT 1`).get(tripId, ...params);
+
   const addedEvents: TripEvent[] = [];
   const addedFlights: TripFlight[] = [];
   const addedHotels: TripHotel[] = [];
@@ -33,6 +38,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
     if (proposal.type === 'event') {
       if (!proposal.tripDayId || !validDayIds.has(proposal.tripDayId)) {
         skipped.push({ type: 'event', reason: 'invalid tripDayId for this trip' });
+        continue;
+      }
+      if (dup('trip_events', 'lower(title) = lower(?) AND trip_day_id = ?', [proposal.title, proposal.tripDayId])) {
+        skipped.push({ type: 'event', reason: 'already on that day' });
         continue;
       }
       const id = crypto.randomUUID();
@@ -53,6 +62,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
       addedEvents.push(camelize<TripEvent>(row));
 
     } else if (proposal.type === 'flight') {
+      if (proposal.flightNumber && proposal.departureDate &&
+          dup('trip_flights', 'flight_number = ? AND departure_date = ?', [proposal.flightNumber, proposal.departureDate])) {
+        skipped.push({ type: 'flight', reason: 'already added' });
+        continue;
+      }
       const id = crypto.randomUUID();
       const row = db.prepare(`
         INSERT INTO trip_flights (
@@ -73,6 +87,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
       addedFlights.push(camelize<TripFlight>(row));
 
     } else if (proposal.type === 'hotel') {
+      if (proposal.checkInDate &&
+          dup('trip_hotels', 'lower(name) = lower(?) AND check_in_date = ?', [proposal.name, proposal.checkInDate])) {
+        skipped.push({ type: 'hotel', reason: 'already added' });
+        continue;
+      }
       const id = crypto.randomUUID();
       const row = db.prepare(`
         INSERT INTO trip_hotels (
@@ -92,6 +111,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
       addedHotels.push(camelize<TripHotel>(row));
 
     } else if (proposal.type === 'rental_car') {
+      if (proposal.pickupDate &&
+          dup('trip_rental_cars', 'lower(company) = lower(?) AND pickup_date = ?', [proposal.company, proposal.pickupDate])) {
+        skipped.push({ type: 'rental_car', reason: 'already added' });
+        continue;
+      }
       const id = crypto.randomUUID();
       const row = db.prepare(`
         INSERT INTO trip_rental_cars (
@@ -112,6 +136,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
       addedRentalCars.push(camelize<TripRentalCar>(row));
 
     } else if (proposal.type === 'parking') {
+      if (proposal.startDate &&
+          dup('trip_parking', 'lower(location) = lower(?) AND start_date = ?', [proposal.location, proposal.startDate])) {
+        skipped.push({ type: 'parking', reason: 'already added' });
+        continue;
+      }
       const id = crypto.randomUUID();
       const row = db.prepare(`
         INSERT INTO trip_parking (
@@ -131,6 +160,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
       addedParking.push(camelize<TripParking>(row));
 
     } else if (proposal.type === 'transit') {
+      if (proposal.departureDate &&
+          dup('trip_transit', 'lower(operator) = lower(?) AND departure_date = ?', [proposal.operator, proposal.departureDate])) {
+        skipped.push({ type: 'transit', reason: 'already added' });
+        continue;
+      }
       const id = crypto.randomUUID();
       const row = db.prepare(`
         INSERT INTO trip_transit (

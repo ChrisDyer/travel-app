@@ -21,7 +21,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ tr
     title: 'title', destination: 'destination', startDate: 'start_date', endDate: 'end_date',
     status: 'status', coverImageUrl: 'cover_image_url', travelers: 'travelers', notes: 'notes',
     travelMode: 'travel_mode', rentalCarNeeded: 'rental_car_needed', digestEnabled: 'digest_enabled',
-    digestDayOfWeek: 'digest_day_of_week',
+    digestDayOfWeek: 'digest_day_of_week', budget: 'budget', budgetCurrency: 'budget_currency',
   };
   const setClauses: string[] = ['updated_at = ?'];
   const values: unknown[] = [new Date().toISOString()];

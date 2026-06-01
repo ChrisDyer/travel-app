@@ -203,6 +203,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           />
 
           <TripCostSummary
+            trip={trip}
             events={events}
             flights={flights}
             hotels={hotels}

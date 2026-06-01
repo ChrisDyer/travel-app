@@ -4,6 +4,7 @@ import { db, camelize, camelizeAll } from '@/db';
 import { getServerUserId } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { ItineraryDocument } from '@/components/itinerary/ItineraryDocument';
+import { TripWeather } from '@/components/itinerary/TripWeather';
 import { PackingChecklist } from '@/components/itinerary/PackingChecklist';
 import { TripHeaderActions } from '@/components/trips/TripHeaderActions';
 import { Trip, TripDay, TripEvent, PackingItem, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
@@ -50,6 +51,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
       </header>
 
       <main className="max-w-[1400px] mx-auto px-6 py-10">
+        <TripWeather tripId={tripId} />
         <ItineraryDocument
           trip={trip}
           initialDays={days}
