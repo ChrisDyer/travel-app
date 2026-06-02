@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { Home } from 'lucide-react';
 import { db, camelize, camelizeAll } from '@/db';
 import { getServerUserId } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,9 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
     <div className="min-h-screen bg-stone-50">
       <header className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between no-print">
         <div className="flex items-center gap-4">
+          <a href="https://zo-bot.com" className="text-stone-400 hover:text-stone-700 transition-colors" title="zo-bot.com">
+            <Home size={18} />
+          </a>
           <Link href="/trips" className="text-stone-400 hover:text-stone-700 text-sm">← Trips</Link>
           <div>
             <h1 className="text-xl font-serif font-bold text-stone-900">{trip.title}</h1>

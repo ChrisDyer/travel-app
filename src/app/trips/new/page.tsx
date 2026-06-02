@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlacesInput } from '@/components/itinerary/PlacesInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ImagePlus } from 'lucide-react';
+import { ImagePlus, Home } from 'lucide-react';
 
 export default function NewTripPage() {
   const router = useRouter();
@@ -65,6 +65,9 @@ export default function NewTripPage() {
   return (
     <div className="min-h-screen bg-stone-50">
       <header className="bg-white border-b border-stone-200 px-6 py-4 flex items-center gap-4">
+        <a href="https://zo-bot.com" className="text-stone-400 hover:text-stone-700 transition-colors" title="zo-bot.com">
+          <Home size={18} />
+        </a>
         <Link href="/trips" className="text-stone-400 hover:text-stone-700 text-sm">← Back</Link>
         <h1 className="text-2xl font-serif font-bold text-stone-900">New Trip</h1>
       </header>
