@@ -12,30 +12,52 @@ interface CoverImageUploadProps {
 export function CoverImageUpload({ tripId, currentUrl, onChanged }: CoverImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(currentUrl);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
+    setError(null);
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image is too large (max 10 MB).');
+      return;
+    }
     setUploading(true);
     const localPreview = URL.createObjectURL(file);
     setPreview(localPreview);
-
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch(`/api/trips/${tripId}/cover-image`, { method: 'POST', body: fd });
-    if (res.ok) {
-      const { coverImageUrl } = await res.json();
-      setPreview(coverImageUrl);
-      onChanged(coverImageUrl);
-    } else {
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`/api/trips/${tripId}/cover-image`, { method: 'POST', body: fd });
+      if (res.ok) {
+        const { coverImageUrl } = await res.json();
+        setPreview(coverImageUrl);
+        onChanged(coverImageUrl);
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setPreview(currentUrl);
+        setError(data.error ?? 'Upload failed. Please try again.');
+      }
+    } catch {
       setPreview(currentUrl);
+      setError('Upload failed. Please check your connection and try again.');
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
   }
 
   async function handleRemove() {
-    await fetch(`/api/trips/${tripId}/cover-image`, { method: 'DELETE' });
-    setPreview(null);
-    onChanged(null);
+    setError(null);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/cover-image`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 404) {
+        setError('Could not remove the photo. Please try again.');
+        return;
+      }
+      setPreview(null);
+      onChanged(null);
+    } catch {
+      setError('Could not remove the photo. Please check your connection and try again.');
+    }
   }
 
   return (
@@ -83,6 +105,7 @@ export function CoverImageUpload({ tripId, currentUrl, onChanged }: CoverImageUp
         className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
       />
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }

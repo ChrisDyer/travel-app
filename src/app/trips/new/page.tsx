@@ -51,9 +51,16 @@ export default function NewTripPage() {
     if (res.ok) {
       const trip = await res.json();
       if (coverFile) {
-        const fd = new FormData();
-        fd.append('file', coverFile);
-        await fetch(`/api/trips/${trip.id}/cover-image`, { method: 'POST', body: fd });
+        try {
+          const fd = new FormData();
+          fd.append('file', coverFile);
+          const imgRes = await fetch(`/api/trips/${trip.id}/cover-image`, { method: 'POST', body: fd });
+          if (!imgRes.ok) {
+            window.alert('Your trip was created, but the cover photo failed to upload. You can add it again from Edit Trip.');
+          }
+        } catch {
+          window.alert('Your trip was created, but the cover photo failed to upload. You can add it again from Edit Trip.');
+        }
       }
       router.push(`/trips/${trip.id}`);
     } else {

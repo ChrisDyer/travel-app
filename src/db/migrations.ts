@@ -208,6 +208,16 @@ const migrations = [
       ALTER TABLE trips ADD COLUMN budget_currency TEXT;
     `,
   },
+  {
+    name: '003_cover_images',
+    sql: `
+      CREATE TABLE IF NOT EXISTS trip_cover_images (
+        trip_id TEXT PRIMARY KEY REFERENCES trips(id) ON DELETE CASCADE,
+        data BLOB NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `,
+  },
 ];
 
 export function runMigrations(db: Database.Database): void {

@@ -81,7 +81,6 @@ cp -r public/. .next/standalone/public/
 ### 6. Create persistent directories
 
 ```bash
-mkdir -p ~/travel-app/public/trip-photos
 # SQLite DB (local.db) is created automatically on first run at DB_PATH
 ```
 
@@ -276,11 +275,32 @@ git checkout main
 crontab -e
 # Add:
 0 2 * * * rclone copy ~/travel-app/local.db onedrive:/travel-app-backups/ --log-file=/var/log/rclone-travel.log
-5 2 * * * rclone sync ~/travel-app/public/trip-photos/ onedrive:/travel-app-photos/ --log-file=/var/log/rclone-travel.log
 ```
+
+> Cover images now live inside `local.db` as blobs (`trip_cover_images` table), so the
+> backup line above covers them automatically — no separate photo sync is needed.
 
 Enable Hetzner automatic snapshots as a full-disk fallback:
 Hetzner Console → Server → **Backups** → Enable.
+
+---
+
+## Release note — one-time cover image import (this release only)
+
+This release moves cover images from `public/trip-photos/` on disk into the
+`trip_cover_images` table in SQLite. If the VPS has existing uploaded cover photos,
+import them once after this release is deployed:
+
+```bash
+ssh chris@91.99.230.234
+cd ~/travel-app
+node scripts/import-cover-images.mjs   # add DB_PATH=... if production uses a custom path (check pm2 env / ecosystem file)
+pm2 restart travel-app                  # not strictly required, but clears any negative 404 cache
+```
+
+Check first how production sets `DB_PATH` (see `pm2 env travel-app`) and pass the same
+value. Run this only once, after migration `003_cover_images` has applied (it applies
+automatically at boot).
 
 ---
 
@@ -296,7 +316,6 @@ nginx -t                       # Test nginx config
 systemctl reload nginx         # Apply nginx changes
 
 df -h                          # Check disk space
-du -sh ~/travel-app/public/trip-photos/  # Check photo storage
 sqlite3 ~/travel-app/local.db ".tables"  # Verify DB is intact
 sqlite3 ~/travel-app/local.db "SELECT count(*) FROM trips;"
 ```
@@ -323,7 +342,7 @@ After every build, two manual copy steps are needed:
 
 ```bash
 cp -r .next/static .next/standalone/.next/static  # JS/CSS chunks
-cp -r public/. .next/standalone/public/            # Public assets + cover photos
+cp -r public/. .next/standalone/public/            # Public assets
 ```
 
 Next.js does not do this automatically. The `Deploy-Travel` alias includes both steps.
@@ -340,9 +359,9 @@ out of static pre-rendering, ensuring the DB is queried fresh on every request.
 
 ### Photo storage
 
-Cover photos are written to `~/travel-app/public/trip-photos/{tripId}.jpg` at runtime.
-This directory is in `.gitignore` and is not touched by deploys. If migrating servers,
-copy this directory alongside `local.db`.
+Cover photos are stored as JPEG blobs in the `trip_cover_images` table and served from
+`GET /api/trips/{tripId}/cover-image`. Deploys cannot affect them, and they're covered
+by the existing `local.db` backup — no separate directory to migrate.
 
 ### Authentication in dev vs production
 
