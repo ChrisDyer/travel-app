@@ -49,6 +49,42 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
     setDays((prev) => prev.map((d) => d.id === dayId ? { ...d, title } : d));
   }
 
+  function handleDayNotesChanged(dayId: string, notes: string | null) {
+    setDays((prev) => prev.map((d) => d.id === dayId ? { ...d, notes } : d));
+  }
+
+  async function reorderEvent(dayId: string, eventId: string, direction: 'up' | 'down') {
+    // Untimed events for this day in current display order
+    const untimed = events
+      .filter((e) => e.tripDayId === dayId && !e.startTime)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    const idx = untimed.findIndex((e) => e.id === eventId);
+    const swapWith = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx === -1 || swapWith < 0 || swapWith >= untimed.length) return;
+
+    const a = untimed[idx], b = untimed[swapWith];
+    // Ensure distinct sort orders even if both are 0 (legacy rows default to 0)
+    const aOrder = b.sortOrder === a.sortOrder ? a.sortOrder + (direction === 'up' ? -1 : 1) : b.sortOrder;
+    const bOrder = a.sortOrder;
+
+    const prevEvents = events;
+    setEvents((prev) => prev.map((e) =>
+      e.id === a.id ? { ...e, sortOrder: aOrder } : e.id === b.id ? { ...e, sortOrder: bOrder } : e
+    ));
+    try {
+      const r1 = await fetch(`/api/trips/${trip.id}/events/${a.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sortOrder: aOrder }),
+      });
+      const r2 = await fetch(`/api/trips/${trip.id}/events/${b.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sortOrder: bOrder }),
+      });
+      if (!r1.ok || !r2.ok) throw new Error();
+    } catch {
+      setEvents(prevEvents); // roll back optimistic move
+      window.alert('Could not reorder. Please try again.');
+    }
+  }
+
   function handleEventSaved(event: TripEvent, isNew: boolean) {
     setEvents((prev) => isNew ? [...prev, event] : prev.map((e) => e.id === event.id ? event : e));
     setEditingEvent(null);
@@ -241,6 +277,8 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
               onEditRentalCar={(c) => setEditingRentalCar(c)}
               onEditTransit={(t) => setEditingTransit(t)}
               onDayTitleChanged={handleDayTitleChanged}
+              onDayNotesChanged={handleDayNotesChanged}
+              onReorderEvent={(eventId, dir) => reorderEvent(day.id, eventId, dir)}
             />
           ))}
         </div>

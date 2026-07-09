@@ -20,6 +20,8 @@ const categoryIcons: Record<string, string> = {
 interface EventCardProps {
   event: TripEvent;
   onEdit: (event: TripEvent) => void;
+  onMoveUp?: () => void;    // provided only when the card can move up
+  onMoveDown?: () => void;  // provided only when the card can move down
 }
 
 function fmt12(time: string) {
@@ -37,7 +39,7 @@ function logoName(title: string): string {
   return title;
 }
 
-export function EventCard({ event, onEdit }: EventCardProps) {
+export function EventCard({ event, onEdit, onMoveUp, onMoveDown }: EventCardProps) {
   return (
     <div
       className="relative pl-8 group cursor-pointer"
@@ -104,6 +106,16 @@ export function EventCard({ event, onEdit }: EventCardProps) {
               <BookingStatusBadge status={event.bookingStatus} />
             </div>
           </div>
+          {(onMoveUp || onMoveDown) && (
+            <div className="no-print flex flex-col opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button aria-label="Move up" disabled={!onMoveUp}
+                onClick={(e) => { e.stopPropagation(); onMoveUp?.(); }}
+                className="text-stone-300 hover:text-stone-600 disabled:opacity-30 leading-none text-xs px-1">▲</button>
+              <button aria-label="Move down" disabled={!onMoveDown}
+                onClick={(e) => { e.stopPropagation(); onMoveDown?.(); }}
+                className="text-stone-300 hover:text-stone-600 disabled:opacity-30 leading-none text-xs px-1">▼</button>
+            </div>
+          )}
         </div>
       </div>
     </div>

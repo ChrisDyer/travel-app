@@ -232,6 +232,7 @@ export default async function PrintPage({ params }: { params: Promise<{ tripId: 
                 {new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
               </h2>
               {day.title && <p className="text-stone-600 font-medium">{day.title}</p>}
+              {day.notes && <p className="text-sm text-stone-500 whitespace-pre-wrap mt-0.5">{day.notes}</p>}
             </div>
 
             <div className="ml-2 pl-4 border-l-2 border-stone-200 space-y-3">

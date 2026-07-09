@@ -19,6 +19,7 @@ interface DaySectionProps {
   isSelected?: boolean;
   onSelectDay?: (day: TripDay) => void;
   onDayTitleChanged?: (dayId: string, title: string | null) => void;
+  onDayNotesChanged?: (dayId: string, notes: string | null) => void;
   onAddEvent: (day: TripDay) => void;
   onEditEvent: (event: TripEvent) => void;
   onEditFlight: (flight: TripFlight) => void;
@@ -26,6 +27,7 @@ interface DaySectionProps {
   onEditParking: (parking: TripParking) => void;
   onEditRentalCar: (rentalCar: TripRentalCar) => void;
   onEditTransit: (transit: TripTransit) => void;
+  onReorderEvent?: (eventId: string, direction: 'up' | 'down') => void;
 }
 
 function fmt12(time: string | null) {
@@ -56,11 +58,13 @@ type TimelineItem =
   | { kind: 'rentalCar'; time: string | null; rentalCar: TripRentalCar; role: 'pickup' | 'dropoff' }
   | { kind: 'transit'; time: string | null; transit: TripTransit };
 
-export function DaySection({ day, events, dayFlights, dayHotels, dayParking, dayRentalCars, dayTransit, isSelected, onSelectDay, onDayTitleChanged, onAddEvent, onEditEvent, onEditFlight, onEditHotel, onEditParking, onEditRentalCar, onEditTransit }: DaySectionProps) {
+export function DaySection({ day, events, dayFlights, dayHotels, dayParking, dayRentalCars, dayTransit, isSelected, onSelectDay, onDayTitleChanged, onDayNotesChanged, onAddEvent, onEditEvent, onEditFlight, onEditHotel, onEditParking, onEditRentalCar, onEditTransit, onReorderEvent }: DaySectionProps) {
   const { weekday, date } = formatDate(day.date);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(day.title ?? '');
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(day.notes ?? '');
 
   async function saveTitle() {
     setEditingTitle(false);
@@ -79,6 +83,26 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
       window.alert('Could not save the day title. Please try again.');
     }
   }
+
+  async function saveNotes() {
+    setEditingNotes(false);
+    const newNotes = notesDraft.trim() || null;
+    if (newNotes === (day.notes ?? null)) return;
+    try {
+      const res = await fetch(`/api/trips/${day.tripId}/days/${day.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: newNotes }),
+      });
+      if (!res.ok) throw new Error();
+      onDayNotesChanged?.(day.id, newNotes);
+    } catch {
+      setNotesDraft(day.notes ?? '');
+      window.alert('Could not save the day notes. Please try again.');
+    }
+  }
+
+  const untimedIds = events.filter((e) => !e.startTime).sort((a, b) => a.sortOrder - b.sortOrder).map((e) => e.id);
 
   // Build a unified timeline sorted by time
   const items: TimelineItem[] = [
@@ -148,6 +172,28 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
               {day.title ? <span className="font-medium text-stone-600">{day.title}</span> : <span className="text-stone-400 italic">+ Add day title</span>}
             </button>
           )}
+          {editingNotes ? (
+            <textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              onBlur={() => { if (editingNotes) saveNotes(); }}
+              onKeyDown={(e) => { if (e.key === 'Escape') { setNotesDraft(day.notes ?? ''); setEditingNotes(false); } }}
+              className="mt-1 w-full max-w-md text-sm text-stone-600 bg-transparent border border-stone-300 rounded-md p-2 focus:outline-none focus:border-stone-500"
+              rows={2}
+              placeholder="Notes for this day…"
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setEditingNotes(true); }}
+              className="no-print mt-0.5 block text-left text-xs text-stone-400 hover:text-stone-600 transition-colors"
+            >
+              {day.notes
+                ? <span className="text-stone-500 whitespace-pre-wrap">{day.notes}</span>
+                : <span className="italic">+ Add day notes</span>}
+            </button>
+          )}
         </div>
       </div>
 
@@ -155,7 +201,16 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
       <div className="relative ml-1.5 pl-4 border-l-2 border-stone-200 space-y-3">
         {items.map((item, i) => {
           if (item.kind === 'event') {
-            return <EventCard key={item.event.id} event={item.event} onEdit={onEditEvent} />;
+            const pos = untimedIds.indexOf(item.event.id); // -1 for timed events
+            return (
+              <EventCard
+                key={item.event.id}
+                event={item.event}
+                onEdit={onEditEvent}
+                onMoveUp={pos > 0 ? () => onReorderEvent?.(item.event.id, 'up') : undefined}
+                onMoveDown={pos !== -1 && pos < untimedIds.length - 1 ? () => onReorderEvent?.(item.event.id, 'down') : undefined}
+              />
+            );
           }
 
           if (item.kind === 'flight') {
