@@ -38,6 +38,7 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError('');
     setLoading(true);
     const form = new FormData(e.currentTarget);
 

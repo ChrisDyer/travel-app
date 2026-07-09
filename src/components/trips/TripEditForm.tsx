@@ -66,26 +66,42 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
       digestEnabled,
       digestDayOfWeek: Number(form.get('digestDayOfWeek') ?? trip.digestDayOfWeek ?? 1),
     };
-    const res = await fetch(`/api/trips/${trip.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      const saved = await res.json();
-      onSaved(saved);
-    } else {
-      const data = await res.json().catch(() => ({})) as { error?: string };
-      setError(data.error ?? 'Something went wrong. Please try again.');
+    try {
+      const res = await fetch(`/api/trips/${trip.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        onSaved(saved);
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setError(data.error ?? 'Something went wrong. Please try again.');
+      }
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function handleDelete() {
+    setError('');
     setDeleting(true);
-    await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' });
-    onDeleted(trip.id);
-    setDeleting(false);
+    try {
+      const res = await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' });
+      if (res.ok || res.status === 404) {
+        onDeleted(trip.id);
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setError(data.error ?? 'Failed to delete trip. Please try again.');
+      }
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (

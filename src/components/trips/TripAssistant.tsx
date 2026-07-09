@@ -201,7 +201,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
         return;
       }
       const result = await res.json() as { addedEvents: TripEvent[]; addedFlights: TripFlight[]; addedHotels: TripHotel[]; addedRentalCars: TripRentalCar[]; addedParking: TripParking[]; addedTransit: TripTransit[] };
-      if (result.addedEvents.length) onEventsAdded(result.addedEvents);
+      if (result.addedEvents?.length) onEventsAdded(result.addedEvents);
       if (result.addedFlights.length) onFlightsAdded(result.addedFlights);
       if (result.addedHotels.length) onHotelsAdded(result.addedHotels);
       if (result.addedRentalCars?.length) onRentalCarsAdded(result.addedRentalCars);

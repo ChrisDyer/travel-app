@@ -29,6 +29,7 @@ export function RentalCarForm({ tripId, rentalCar, onSaved, onDeleted, onClose }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError('');
     setLoading(true);
     const form = new FormData(e.currentTarget);
 

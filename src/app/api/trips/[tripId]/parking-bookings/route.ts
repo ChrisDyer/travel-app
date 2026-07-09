@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db, camelize, camelizeAll } from '@/db';
 import { getUserId } from '@/lib/auth';
+import { requireFields, withErrorHandling } from '@/lib/api-helpers';
 import type { TripParking } from '@/types/travel';
 
-export async function GET(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+export const GET = withErrorHandling(async (request: Request, { params }: { params: Promise<{ tripId: string }> }) => {
   const { tripId } = await params;
   const userId = getUserId(request);
   const trip = db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
@@ -11,15 +12,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ trip
 
   const spots = db.prepare('SELECT * FROM trip_parking WHERE trip_id = ? ORDER BY start_date ASC, start_time ASC').all(tripId) as Record<string, unknown>[];
   return NextResponse.json(camelizeAll<TripParking>(spots));
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+export const POST = withErrorHandling(async (request: Request, { params }: { params: Promise<{ tripId: string }> }) => {
   const { tripId } = await params;
   const userId = getUserId(request);
   const trip = db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
   if (!trip) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const body = await request.json();
+  const invalid = requireFields(body, ['location']);
+  if (invalid) return invalid;
+
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
@@ -39,4 +43,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   ) as Record<string, unknown>;
 
   return NextResponse.json(camelize<TripParking>(spot), { status: 201 });
-}
+});

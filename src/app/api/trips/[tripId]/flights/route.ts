@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db, camelize, camelizeAll } from '@/db';
 import { getUserId } from '@/lib/auth';
+import { withErrorHandling } from '@/lib/api-helpers';
 import type { TripFlight } from '@/types/travel';
 
-export async function GET(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+export const GET = withErrorHandling(async (request: Request, { params }: { params: Promise<{ tripId: string }> }) => {
   const { tripId } = await params;
   const userId = getUserId(request);
   const trip = db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
@@ -11,9 +12,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ trip
 
   const flights = db.prepare('SELECT * FROM trip_flights WHERE trip_id = ? ORDER BY departure_date ASC, departure_time ASC').all(tripId) as Record<string, unknown>[];
   return NextResponse.json(camelizeAll<TripFlight>(flights));
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+export const POST = withErrorHandling(async (request: Request, { params }: { params: Promise<{ tripId: string }> }) => {
   const { tripId } = await params;
   const userId = getUserId(request);
   const trip = db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
@@ -45,4 +46,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   ) as Record<string, unknown>;
 
   return NextResponse.json(camelize<TripFlight>(flight), { status: 201 });
-}
+});

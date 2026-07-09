@@ -66,12 +66,18 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
     setEditingTitle(false);
     const newTitle = titleDraft.trim() || null;
     if (newTitle === (day.title ?? null)) return;
-    await fetch(`/api/trips/${day.tripId ?? ''}/days/${day.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: newTitle }),
-    });
-    onDayTitleChanged?.(day.id, newTitle);
+    try {
+      const res = await fetch(`/api/trips/${day.tripId}/days/${day.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (!res.ok) throw new Error();
+      onDayTitleChanged?.(day.id, newTitle);
+    } catch {
+      setTitleDraft(day.title ?? '');
+      window.alert('Could not save the day title. Please try again.');
+    }
   }
 
   // Build a unified timeline sorted by time
@@ -124,8 +130,11 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
               ref={titleInputRef}
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
-              onBlur={saveTitle}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveTitle(); } if (e.key === 'Escape') { setTitleDraft(day.title ?? ''); setEditingTitle(false); } }}
+              onBlur={() => { if (editingTitle) saveTitle(); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+                if (e.key === 'Escape') { setTitleDraft(day.title ?? ''); setEditingTitle(false); }
+              }}
               className="mt-0.5 text-stone-600 font-medium text-sm bg-transparent border-b border-stone-400 focus:outline-none w-full max-w-xs"
               placeholder="Add a day title…"
               autoFocus

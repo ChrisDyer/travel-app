@@ -33,6 +33,7 @@ export function FlightForm({ tripId, flight, onSaved, onDeleted, onClose }: Flig
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError('');
     setLoading(true);
     const form = new FormData(e.currentTarget);
 

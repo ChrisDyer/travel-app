@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db, camelize } from '@/db';
 import { getUserId } from '@/lib/auth';
+import { withErrorHandling } from '@/lib/api-helpers';
 import type { TripFlight } from '@/types/travel';
 
 type Params = { params: Promise<{ tripId: string; flightId: string }> };
 
-export async function PATCH(request: Request, { params }: Params) {
+export const PATCH = withErrorHandling(async (request: Request, { params }: Params) => {
   const { tripId, flightId } = await params;
   const userId = getUserId(request);
   const trip = db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
@@ -36,9 +37,9 @@ export async function PATCH(request: Request, { params }: Params) {
   ).get(...values) as Record<string, unknown> | undefined;
   if (!flight) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(camelize<TripFlight>(flight));
-}
+});
 
-export async function DELETE(request: Request, { params }: Params) {
+export const DELETE = withErrorHandling(async (request: Request, { params }: Params) => {
   const { tripId, flightId } = await params;
   const userId = getUserId(request);
   const trip = db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
@@ -46,4 +47,4 @@ export async function DELETE(request: Request, { params }: Params) {
 
   db.prepare('DELETE FROM trip_flights WHERE id = ? AND trip_id = ?').run(flightId, tripId);
   return new NextResponse(null, { status: 204 });
-}
+});

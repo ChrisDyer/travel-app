@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { getUserId } from '@/lib/auth';
+import { withErrorHandling } from '@/lib/api-helpers';
 
-export async function PATCH(
+export const PATCH = withErrorHandling(async (
   request: Request,
   { params }: { params: Promise<{ tripId: string; dayId: string }> }
-) {
+) => {
   const { tripId, dayId } = await params;
   const userId = getUserId(request);
 
@@ -18,4 +19,4 @@ export async function PATCH(
   db.prepare('UPDATE trip_days SET title = ? WHERE id = ? AND trip_id = ?').run(title, dayId, tripId);
 
   return NextResponse.json({ id: dayId, title });
-}
+});

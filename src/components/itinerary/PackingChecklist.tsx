@@ -46,21 +46,35 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
   }
 
   async function togglePacked(item: PackingItem) {
+    setAddError('');
     const next = !item.isPacked;
-    const res = await fetch(`/api/trips/${tripId}/packing/${item.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isPacked: next }),
-    });
-    if (res.ok) {
-      setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, isPacked: next } : i));
+    try {
+      const res = await fetch(`/api/trips/${tripId}/packing/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPacked: next }),
+      });
+      if (res.ok) {
+        setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, isPacked: next } : i));
+      } else {
+        setAddError('Could not update that item. Please try again.');
+      }
+    } catch {
+      setAddError('Connection error. Please try again.');
     }
   }
 
   async function deleteItem(id: string) {
-    const res = await fetch(`/api/trips/${tripId}/packing/${id}`, { method: 'DELETE' });
-    if (res.ok) {
-      setItems((prev) => prev.filter((i) => i.id !== id));
+    setAddError('');
+    try {
+      const res = await fetch(`/api/trips/${tripId}/packing/${id}`, { method: 'DELETE' });
+      if (res.ok || res.status === 404) {
+        setItems((prev) => prev.filter((i) => i.id !== id));
+      } else {
+        setAddError('Could not delete that item. Please try again.');
+      }
+    } catch {
+      setAddError('Connection error. Please try again.');
     }
   }
 
@@ -119,6 +133,8 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
           </Button>
         </div>
       </div>
+
+      {addError && <p className="text-sm text-red-600 mb-4">{addError}</p>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
         {CATEGORIES.map((cat) => {
@@ -215,7 +231,6 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
                 Cancel
               </Button>
             </div>
-            {addError && <p className="text-sm text-red-600">{addError}</p>}
           </div>
         ) : (
           <Button variant="outline" size="sm" onClick={() => setShowGlobalAdd(true)}>

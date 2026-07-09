@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { getUserId } from '@/lib/auth';
+import { withErrorHandling } from '@/lib/api-helpers';
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -8,7 +9,7 @@ function requireTrip(tripId: string, userId: string) {
   return db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId) as { id: string } | undefined;
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+export const GET = withErrorHandling(async (request: Request, { params }: { params: Promise<{ tripId: string }> }) => {
   const { tripId } = await params;
   const userId = getUserId(request);
   if (!requireTrip(tripId, userId)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -23,9 +24,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ trip
       'Cache-Control': 'private, max-age=31536000, immutable',
     },
   });
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+export const POST = withErrorHandling(async (request: Request, { params }: { params: Promise<{ tripId: string }> }) => {
   const { tripId } = await params;
   const userId = getUserId(request);
   if (!requireTrip(tripId, userId)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -63,9 +64,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   save();
 
   return NextResponse.json({ coverImageUrl });
-}
+});
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+export const DELETE = withErrorHandling(async (request: Request, { params }: { params: Promise<{ tripId: string }> }) => {
   const { tripId } = await params;
   const userId = getUserId(request);
   if (!requireTrip(tripId, userId)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -78,4 +79,4 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ t
   remove();
 
   return new NextResponse(null, { status: 204 });
-}
+});

@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server';
 import { db, camelize, camelizeAll } from '@/db';
 import { getUserId } from '@/lib/auth';
+import { requireFields, withErrorHandling } from '@/lib/api-helpers';
 import type { Trip, TripDay } from '@/types/travel';
 
-export async function GET(request: Request) {
+export const GET = withErrorHandling(async (request: Request) => {
   const userId = getUserId(request);
   const rows = db.prepare('SELECT * FROM trips WHERE user_id = ? ORDER BY created_at DESC').all(userId) as Record<string, unknown>[];
   return NextResponse.json(camelizeAll<Trip>(rows));
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withErrorHandling(async (request: Request) => {
   const userId = getUserId(request);
   const body = await request.json();
+  const invalid = requireFields(body, ['title', 'destination', 'startDate', 'endDate']);
+  if (invalid) return invalid;
+
   const {
     title, destination, startDate, endDate,
     status = 'planning',
@@ -53,4 +57,4 @@ export async function POST(request: Request) {
   if (days.length > 0) insertDays(days);
 
   return NextResponse.json(camelize<Trip>(trip), { status: 201 });
-}
+});

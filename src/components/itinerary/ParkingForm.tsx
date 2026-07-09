@@ -29,6 +29,7 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError('');
     setLoading(true);
     const form = new FormData(e.currentTarget);
 
@@ -67,10 +68,21 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
 
   async function handleDelete() {
     if (!parking) return;
+    setError('');
     setDeleting(true);
-    await fetch(`/api/trips/${tripId}/parking-bookings/${parking.id}`, { method: 'DELETE' });
-    onDeleted(parking.id);
-    setDeleting(false);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/parking-bookings/${parking.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        onDeleted(parking.id);
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setError(data.error ?? 'Failed to delete. Please try again.');
+      }
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
