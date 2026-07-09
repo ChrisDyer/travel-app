@@ -63,6 +63,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
       <main className="max-w-[1400px] mx-auto px-6 py-10">
         <TripWeather tripId={tripId} />
         <ItineraryDocument
+          key={trip.updatedAt as string}
           trip={trip}
           initialDays={days}
           initialEvents={events}

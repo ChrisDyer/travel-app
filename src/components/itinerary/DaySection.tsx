@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar } from '@/types/travel';
+import { TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
 import { EventCard } from './EventCard';
 import { BrandLogo } from './BrandLogo';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ interface DaySectionProps {
   dayHotels: { hotel: TripHotel; role: 'checkin' | 'checkout' }[];
   dayParking: { parking: TripParking; role: 'dropoff' | 'pickup' }[];
   dayRentalCars: { rentalCar: TripRentalCar; role: 'pickup' | 'dropoff' }[];
+  dayTransit: TripTransit[];
   isSelected?: boolean;
   onSelectDay?: (day: TripDay) => void;
   onDayTitleChanged?: (dayId: string, title: string | null) => void;
@@ -24,6 +25,7 @@ interface DaySectionProps {
   onEditHotel: (hotel: TripHotel) => void;
   onEditParking: (parking: TripParking) => void;
   onEditRentalCar: (rentalCar: TripRentalCar) => void;
+  onEditTransit: (transit: TripTransit) => void;
 }
 
 function fmt12(time: string | null) {
@@ -42,14 +44,19 @@ function formatDate(dateStr: string) {
   };
 }
 
+const transitTypeIcon: Record<string, string> = {
+  train: '🚆', bus: '🚌', ferry: '⛴️', subway: '🚇', shuttle: '🚐', taxi: '🚕', rideshare: '🚗', other: '🚌',
+};
+
 type TimelineItem =
   | { kind: 'event'; time: string | null; event: TripEvent }
   | { kind: 'flight'; time: string | null; flight: TripFlight; role: 'departure' | 'arrival' | 'return-departure' | 'return-arrival' }
   | { kind: 'hotel'; time: string | null; hotel: TripHotel; role: 'checkin' | 'checkout' }
   | { kind: 'parking'; time: string | null; parking: TripParking; role: 'dropoff' | 'pickup' }
-  | { kind: 'rentalCar'; time: string | null; rentalCar: TripRentalCar; role: 'pickup' | 'dropoff' };
+  | { kind: 'rentalCar'; time: string | null; rentalCar: TripRentalCar; role: 'pickup' | 'dropoff' }
+  | { kind: 'transit'; time: string | null; transit: TripTransit };
 
-export function DaySection({ day, events, dayFlights, dayHotels, dayParking, dayRentalCars, isSelected, onSelectDay, onDayTitleChanged, onAddEvent, onEditEvent, onEditFlight, onEditHotel, onEditParking, onEditRentalCar }: DaySectionProps) {
+export function DaySection({ day, events, dayFlights, dayHotels, dayParking, dayRentalCars, dayTransit, isSelected, onSelectDay, onDayTitleChanged, onAddEvent, onEditEvent, onEditFlight, onEditHotel, onEditParking, onEditRentalCar, onEditTransit }: DaySectionProps) {
   const { weekday, date } = formatDate(day.date);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(day.title ?? '');
@@ -94,6 +101,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
       rentalCar,
       role,
     })),
+    ...dayTransit.map((t) => ({ kind: 'transit' as const, time: t.departureTime ?? null, transit: t })),
   ].sort((a, b) => {
     if (a.time && b.time) return a.time.localeCompare(b.time);
     if (a.time) return -1;
@@ -219,6 +227,32 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-stone-900 truncate">{c.company}</p>
                         <p className="text-xs text-slate-600">{isPickup ? 'Pick-up' : 'Drop-off'}{isPickup && c.pickupLocation ? ` · ${c.pickupLocation}` : !isPickup && c.dropoffLocation ? ` · ${c.dropoffLocation}` : ''}</p>
+                      </div>
+                    </div>
+                    {item.time && <span className="text-sm font-semibold text-stone-700 shrink-0">{fmt12(item.time)}</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (item.kind === 'transit') {
+            const t = item.transit;
+            return (
+              <div key={`transit-${t.id}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onEditTransit(t)}>
+                <div className="absolute left-0 top-3 w-3 h-3 rounded-full bg-white border-2 border-slate-300 group-hover:border-slate-500 transition-colors" />
+                <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 hover:border-slate-300 hover:shadow-sm transition-all">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm shrink-0">{t.transitType ? (transitTypeIcon[t.transitType] ?? '🚌') : '🚌'}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-stone-900 truncate">
+                          {t.operator}
+                          {t.routeNumber && <span className="text-stone-400 font-normal ml-1.5 text-xs">{t.routeNumber}</span>}
+                        </p>
+                        <p className="text-xs text-slate-600">
+                          {t.fromLocation}{t.fromLocation && t.toLocation ? ' → ' : ''}{t.toLocation}
+                        </p>
                       </div>
                     </div>
                     {item.time && <span className="text-sm font-semibold text-stone-700 shrink-0">{fmt12(item.time)}</span>}

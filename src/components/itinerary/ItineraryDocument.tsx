@@ -11,6 +11,7 @@ import { FlightForm } from './FlightForm';
 import { HotelForm } from './HotelForm';
 import { ParkingForm } from './ParkingForm';
 import { RentalCarForm } from './RentalCarForm';
+import { TransitForm } from './TransitForm';
 import { PackingChecklist } from './PackingChecklist';
 import { TripCostSummary } from './TripCostSummary';
 import { TripAssistant } from '@/components/trips/TripAssistant';
@@ -41,6 +42,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
   const [editingHotel, setEditingHotel] = useState<TripHotel | null>(null);
   const [editingParking, setEditingParking] = useState<TripParking | null>(null);
   const [editingRentalCar, setEditingRentalCar] = useState<TripRentalCar | null>(null);
+  const [editingTransit, setEditingTransit] = useState<TripTransit | null>(null);
   const [selectedDay, setSelectedDay] = useState<TripDay | null>(null);
 
   function handleDayTitleChanged(dayId: string, title: string | null) {
@@ -106,6 +108,10 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
       }
     }
     return items;
+  }
+
+  function transitForDay(date: string) {
+    return transit.filter((t) => t.departureDate === date);
   }
 
   function hotelsForDay(date: string) {
@@ -181,11 +187,11 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
             tripId={trip.id}
             travelMode={trip.travelMode}
             rentalCarNeeded={trip.rentalCarNeeded}
-            initialFlights={initialFlights}
-            initialHotels={initialHotels}
-            initialParking={initialParking}
-            initialRentalCars={initialRentalCars}
-            initialTransit={initialTransit}
+            flights={flights}
+            hotels={hotels}
+            parking={parking}
+            rentalCars={rentalCars}
+            transit={transit}
             onFlightsChange={setFlights}
             onHotelsChange={setHotels}
             onParkingChange={setParking}
@@ -224,6 +230,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
               dayHotels={hotelsForDay(day.date)}
               dayParking={parkingForDay(day.date)}
               dayRentalCars={rentalCarsForDay(day.date)}
+              dayTransit={transitForDay(day.date)}
               isSelected={selectedDay?.id === day.id}
               onSelectDay={(d) => setSelectedDay((prev) => prev?.id === d.id ? null : d)}
               onAddEvent={setAddingToDay}
@@ -232,6 +239,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
               onEditHotel={(h) => setEditingHotel(h)}
               onEditParking={(p) => setEditingParking(p)}
               onEditRentalCar={(c) => setEditingRentalCar(c)}
+              onEditTransit={(t) => setEditingTransit(t)}
               onDayTitleChanged={handleDayTitleChanged}
             />
           ))}
@@ -299,6 +307,19 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           }}
           onDeleted={(id) => { setRentalCars((prev) => prev.filter((x) => x.id !== id)); setEditingRentalCar(null); }}
           onClose={() => setEditingRentalCar(null)}
+        />
+      )}
+
+      {editingTransit && (
+        <TransitForm
+          tripId={trip.id}
+          transit={editingTransit}
+          onSaved={(t, isNew) => {
+            setTransit((prev) => isNew ? [...prev, t] : prev.map((x) => x.id === t.id ? t : x));
+            setEditingTransit(null);
+          }}
+          onDeleted={(id) => { setTransit((prev) => prev.filter((x) => x.id !== id)); setEditingTransit(null); }}
+          onClose={() => setEditingTransit(null)}
         />
       )}
     </>

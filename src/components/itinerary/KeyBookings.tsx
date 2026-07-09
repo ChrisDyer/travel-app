@@ -18,11 +18,11 @@ interface KeyBookingsProps {
   tripId: string;
   travelMode: 'fly' | 'drive';
   rentalCarNeeded: boolean;
-  initialFlights: TripFlight[];
-  initialHotels: TripHotel[];
-  initialParking: TripParking[];
-  initialRentalCars: TripRentalCar[];
-  initialTransit: TripTransit[];
+  flights: TripFlight[];
+  hotels: TripHotel[];
+  parking: TripParking[];
+  rentalCars: TripRentalCar[];
+  transit: TripTransit[];
   onFlightsChange: (flights: TripFlight[]) => void;
   onHotelsChange: (hotels: TripHotel[]) => void;
   onParkingChange: (parking: TripParking[]) => void;
@@ -99,15 +99,9 @@ const transitTypeIcon: Record<string, string> = {
 export function KeyBookings({
   tripId,
   travelMode, rentalCarNeeded,
-  initialFlights, initialHotels, initialParking, initialRentalCars, initialTransit,
+  flights, hotels, parking, rentalCars, transit,
   onFlightsChange, onHotelsChange, onParkingChange, onRentalCarsChange, onTransitChange,
 }: KeyBookingsProps) {
-  const [flights, setFlights] = useState<TripFlight[]>(initialFlights);
-  const [hotels, setHotels] = useState<TripHotel[]>(initialHotels);
-  const [parking, setParking] = useState<TripParking[]>(initialParking);
-  const [rentalCars, setRentalCars] = useState<TripRentalCar[]>(initialRentalCars);
-  const [transit, setTransit] = useState<TripTransit[]>(initialTransit);
-
   const [editingFlight, setEditingFlight] = useState<TripFlight | null>(null);
   const [addingFlight, setAddingFlight] = useState(false);
   const [editingHotel, setEditingHotel] = useState<TripHotel | null>(null);
@@ -125,30 +119,24 @@ export function KeyBookings({
   const [rentalCarsOpen, setRentalCarsOpen] = useState(false);
   const [transitOpen, setTransitOpen] = useState(false);
 
-  function updateFlights(next: TripFlight[]) { setFlights(next); onFlightsChange(next); }
-  function updateHotels(next: TripHotel[]) { setHotels(next); onHotelsChange(next); }
-  function updateParking(next: TripParking[]) { setParking(next); onParkingChange(next); }
-  function updateRentalCars(next: TripRentalCar[]) { setRentalCars(next); onRentalCarsChange(next); }
-  function updateTransit(next: TripTransit[]) { setTransit(next); onTransitChange(next); }
-
   function handleFlightSaved(f: TripFlight, isNew: boolean) {
-    updateFlights(isNew ? [...flights, f] : flights.map((x) => x.id === f.id ? f : x));
+    onFlightsChange(isNew ? [...flights, f] : flights.map((x) => x.id === f.id ? f : x));
     setEditingFlight(null); setAddingFlight(false);
   }
   function handleHotelSaved(h: TripHotel, isNew: boolean) {
-    updateHotels(isNew ? [...hotels, h] : hotels.map((x) => x.id === h.id ? h : x));
+    onHotelsChange(isNew ? [...hotels, h] : hotels.map((x) => x.id === h.id ? h : x));
     setEditingHotel(null); setAddingHotel(false);
   }
   function handleParkingSaved(p: TripParking, isNew: boolean) {
-    updateParking(isNew ? [...parking, p] : parking.map((x) => x.id === p.id ? p : x));
+    onParkingChange(isNew ? [...parking, p] : parking.map((x) => x.id === p.id ? p : x));
     setEditingParking(null); setAddingParking(false);
   }
   function handleRentalCarSaved(c: TripRentalCar, isNew: boolean) {
-    updateRentalCars(isNew ? [...rentalCars, c] : rentalCars.map((x) => x.id === c.id ? c : x));
+    onRentalCarsChange(isNew ? [...rentalCars, c] : rentalCars.map((x) => x.id === c.id ? c : x));
     setEditingRentalCar(null); setAddingRentalCar(false);
   }
   function handleTransitSaved(t: TripTransit, isNew: boolean) {
-    updateTransit(isNew ? [...transit, t] : transit.map((x) => x.id === t.id ? t : x));
+    onTransitChange(isNew ? [...transit, t] : transit.map((x) => x.id === t.id ? t : x));
     setEditingTransit(null); setAddingTransit(false);
   }
 
@@ -437,31 +425,31 @@ export function KeyBookings({
       {(editingFlight || addingFlight) && (
         <FlightForm tripId={tripId} flight={editingFlight}
           onSaved={handleFlightSaved}
-          onDeleted={(id) => { updateFlights(flights.filter((x) => x.id !== id)); setEditingFlight(null); }}
+          onDeleted={(id) => { onFlightsChange(flights.filter((x) => x.id !== id)); setEditingFlight(null); }}
           onClose={() => { setEditingFlight(null); setAddingFlight(false); }} />
       )}
       {(editingHotel || addingHotel) && (
         <HotelForm tripId={tripId} hotel={editingHotel}
           onSaved={handleHotelSaved}
-          onDeleted={(id) => { updateHotels(hotels.filter((x) => x.id !== id)); setEditingHotel(null); }}
+          onDeleted={(id) => { onHotelsChange(hotels.filter((x) => x.id !== id)); setEditingHotel(null); }}
           onClose={() => { setEditingHotel(null); setAddingHotel(false); }} />
       )}
       {(editingParking || addingParking) && (
         <ParkingForm tripId={tripId} parking={editingParking}
           onSaved={handleParkingSaved}
-          onDeleted={(id) => { updateParking(parking.filter((x) => x.id !== id)); setEditingParking(null); }}
+          onDeleted={(id) => { onParkingChange(parking.filter((x) => x.id !== id)); setEditingParking(null); }}
           onClose={() => { setEditingParking(null); setAddingParking(false); }} />
       )}
       {(editingRentalCar || addingRentalCar) && (
         <RentalCarForm tripId={tripId} rentalCar={editingRentalCar}
           onSaved={handleRentalCarSaved}
-          onDeleted={(id) => { updateRentalCars(rentalCars.filter((x) => x.id !== id)); setEditingRentalCar(null); }}
+          onDeleted={(id) => { onRentalCarsChange(rentalCars.filter((x) => x.id !== id)); setEditingRentalCar(null); }}
           onClose={() => { setEditingRentalCar(null); setAddingRentalCar(false); }} />
       )}
       {(editingTransit || addingTransit) && (
         <TransitForm tripId={tripId} transit={editingTransit}
           onSaved={handleTransitSaved}
-          onDeleted={(id) => { updateTransit(transit.filter((x) => x.id !== id)); setEditingTransit(null); }}
+          onDeleted={(id) => { onTransitChange(transit.filter((x) => x.id !== id)); setEditingTransit(null); }}
           onClose={() => { setEditingTransit(null); setAddingTransit(false); }} />
       )}
     </div>
