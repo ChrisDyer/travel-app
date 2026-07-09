@@ -13,6 +13,7 @@ import { getLogoPath } from '@/lib/logos';
 import { BrandLogo } from './BrandLogo';
 import { getMapsUrl } from '@/lib/maps';
 import { ChevronDown, MapPin } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 
 interface KeyBookingsProps {
   tripId: string;
@@ -122,22 +123,27 @@ export function KeyBookings({
   function handleFlightSaved(f: TripFlight, isNew: boolean) {
     onFlightsChange(isNew ? [...flights, f] : flights.map((x) => x.id === f.id ? f : x));
     setEditingFlight(null); setAddingFlight(false);
+    toast('Flight saved');
   }
   function handleHotelSaved(h: TripHotel, isNew: boolean) {
     onHotelsChange(isNew ? [...hotels, h] : hotels.map((x) => x.id === h.id ? h : x));
     setEditingHotel(null); setAddingHotel(false);
+    toast('Hotel saved');
   }
   function handleParkingSaved(p: TripParking, isNew: boolean) {
     onParkingChange(isNew ? [...parking, p] : parking.map((x) => x.id === p.id ? p : x));
     setEditingParking(null); setAddingParking(false);
+    toast('Parking saved');
   }
   function handleRentalCarSaved(c: TripRentalCar, isNew: boolean) {
     onRentalCarsChange(isNew ? [...rentalCars, c] : rentalCars.map((x) => x.id === c.id ? c : x));
     setEditingRentalCar(null); setAddingRentalCar(false);
+    toast('Rental car saved');
   }
   function handleTransitSaved(t: TripTransit, isNew: boolean) {
     onTransitChange(isNew ? [...transit, t] : transit.map((x) => x.id === t.id ? t : x));
     setEditingTransit(null); setAddingTransit(false);
+    toast('Transit saved');
   }
 
   return (
@@ -425,31 +431,31 @@ export function KeyBookings({
       {(editingFlight || addingFlight) && (
         <FlightForm tripId={tripId} flight={editingFlight}
           onSaved={handleFlightSaved}
-          onDeleted={(id) => { onFlightsChange(flights.filter((x) => x.id !== id)); setEditingFlight(null); }}
+          onDeleted={(id) => { onFlightsChange(flights.filter((x) => x.id !== id)); setEditingFlight(null); toast('Flight deleted'); }}
           onClose={() => { setEditingFlight(null); setAddingFlight(false); }} />
       )}
       {(editingHotel || addingHotel) && (
         <HotelForm tripId={tripId} hotel={editingHotel}
           onSaved={handleHotelSaved}
-          onDeleted={(id) => { onHotelsChange(hotels.filter((x) => x.id !== id)); setEditingHotel(null); }}
+          onDeleted={(id) => { onHotelsChange(hotels.filter((x) => x.id !== id)); setEditingHotel(null); toast('Hotel deleted'); }}
           onClose={() => { setEditingHotel(null); setAddingHotel(false); }} />
       )}
       {(editingParking || addingParking) && (
         <ParkingForm tripId={tripId} parking={editingParking}
           onSaved={handleParkingSaved}
-          onDeleted={(id) => { onParkingChange(parking.filter((x) => x.id !== id)); setEditingParking(null); }}
+          onDeleted={(id) => { onParkingChange(parking.filter((x) => x.id !== id)); setEditingParking(null); toast('Parking deleted'); }}
           onClose={() => { setEditingParking(null); setAddingParking(false); }} />
       )}
       {(editingRentalCar || addingRentalCar) && (
         <RentalCarForm tripId={tripId} rentalCar={editingRentalCar}
           onSaved={handleRentalCarSaved}
-          onDeleted={(id) => { onRentalCarsChange(rentalCars.filter((x) => x.id !== id)); setEditingRentalCar(null); }}
+          onDeleted={(id) => { onRentalCarsChange(rentalCars.filter((x) => x.id !== id)); setEditingRentalCar(null); toast('Rental car deleted'); }}
           onClose={() => { setEditingRentalCar(null); setAddingRentalCar(false); }} />
       )}
       {(editingTransit || addingTransit) && (
         <TransitForm tripId={tripId} transit={editingTransit}
           onSaved={handleTransitSaved}
-          onDeleted={(id) => { onTransitChange(transit.filter((x) => x.id !== id)); setEditingTransit(null); }}
+          onDeleted={(id) => { onTransitChange(transit.filter((x) => x.id !== id)); setEditingTransit(null); toast('Transit deleted'); }}
           onClose={() => { setEditingTransit(null); setAddingTransit(false); }} />
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { ImagePlus, X } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 
 interface CoverImageUploadProps {
   tripId: string;
@@ -32,6 +33,7 @@ export function CoverImageUpload({ tripId, currentUrl, onChanged }: CoverImageUp
         const { coverImageUrl } = await res.json();
         setPreview(coverImageUrl);
         onChanged(coverImageUrl);
+        toast('Cover photo updated');
       } else {
         const data = await res.json().catch(() => ({})) as { error?: string };
         setPreview(currentUrl);
@@ -55,6 +57,7 @@ export function CoverImageUpload({ tripId, currentUrl, onChanged }: CoverImageUp
       }
       setPreview(null);
       onChanged(null);
+      toast('Cover photo removed');
     } catch {
       setError('Could not remove the photo. Please check your connection and try again.');
     }

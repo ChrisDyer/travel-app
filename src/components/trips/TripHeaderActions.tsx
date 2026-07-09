@@ -7,6 +7,8 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { TripEditForm } from './TripEditForm';
 import { Pencil, CalendarPlus } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
+import { tripTiming, localToday } from '@/lib/trip-status';
 
 interface TripHeaderActionsProps {
   trip: Trip;
@@ -18,6 +20,8 @@ export function TripHeaderActions({ trip }: TripHeaderActionsProps) {
 
   return (
     <>
+      <span className="text-xs text-stone-400">{tripTiming(trip.startDate, trip.endDate, localToday())}</span>
+
       <a
         href={`/api/trips/${trip.id}/export`}
         title="Download itinerary as a calendar (.ics) file"
@@ -35,7 +39,7 @@ export function TripHeaderActions({ trip }: TripHeaderActionsProps) {
       {editing && (
         <TripEditForm
           trip={trip}
-          onSaved={() => { setEditing(false); router.refresh(); }}
+          onSaved={() => { setEditing(false); router.refresh(); toast('Trip saved'); }}
           onUpdated={() => router.refresh()}
           onDeleted={() => router.push('/trips')}
           onClose={() => setEditing(false)}

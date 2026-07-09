@@ -15,6 +15,7 @@ import { TransitForm } from './TransitForm';
 import { PackingChecklist } from './PackingChecklist';
 import { TripCostSummary } from './TripCostSummary';
 import { TripAssistant } from '@/components/trips/TripAssistant';
+import { toast } from '@/components/ui/toast';
 
 interface ItineraryDocumentProps {
   trip: Trip;
@@ -89,11 +90,13 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
     setEvents((prev) => isNew ? [...prev, event] : prev.map((e) => e.id === event.id ? event : e));
     setEditingEvent(null);
     setAddingToDay(null);
+    toast(isNew ? 'Event added' : 'Event saved');
   }
 
   function handleEventDeleted(eventId: string) {
     setEvents((prev) => prev.filter((e) => e.id !== eventId));
     setEditingEvent(null);
+    toast('Event deleted');
   }
 
   const eventsForDay = (dayId: string) =>
@@ -171,6 +174,9 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
     const match = location.match(/\(([A-Z]{3})\)/);
     return match ? match[1] === homeAirportCode : false;
   }
+
+  const isEmpty = events.length === 0 && flights.length === 0 && hotels.length === 0
+    && parking.length === 0 && rentalCars.length === 0 && transit.length === 0;
 
   const mapLocations: MapLocation[] = [
     ...hotels.filter((h) => h.address).map((h) => ({ title: h.name, address: h.address!, type: 'hotel' as const })),
@@ -257,6 +263,15 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
 
         {/* Right column: daily itinerary */}
         <div className="space-y-12">
+          {isEmpty && (
+            <div className="no-print rounded-xl border border-dashed border-stone-300 bg-white p-6 text-center">
+              <p className="font-serif text-lg text-stone-700">Let&apos;s plan this trip ✈</p>
+              <p className="text-sm text-stone-500 mt-1 max-w-md mx-auto">
+                Add your first flight or hotel from the Key Bookings panel, add events to any day below,
+                or open the Trip Assistant and paste a confirmation email to import bookings automatically.
+              </p>
+            </div>
+          )}
           {days.map((day) => (
             <DaySection
               key={day.id}
@@ -303,8 +318,9 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           onSaved={(f, isNew) => {
             setFlights((prev) => isNew ? [...prev, f] : prev.map((x) => x.id === f.id ? f : x));
             setEditingFlight(null);
+            toast('Flight saved');
           }}
-          onDeleted={(id) => { setFlights((prev) => prev.filter((x) => x.id !== id)); setEditingFlight(null); }}
+          onDeleted={(id) => { setFlights((prev) => prev.filter((x) => x.id !== id)); setEditingFlight(null); toast('Flight deleted'); }}
           onClose={() => setEditingFlight(null)}
         />
       )}
@@ -316,8 +332,9 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           onSaved={(h, isNew) => {
             setHotels((prev) => isNew ? [...prev, h] : prev.map((x) => x.id === h.id ? h : x));
             setEditingHotel(null);
+            toast('Hotel saved');
           }}
-          onDeleted={(id) => { setHotels((prev) => prev.filter((x) => x.id !== id)); setEditingHotel(null); }}
+          onDeleted={(id) => { setHotels((prev) => prev.filter((x) => x.id !== id)); setEditingHotel(null); toast('Hotel deleted'); }}
           onClose={() => setEditingHotel(null)}
         />
       )}
@@ -329,8 +346,9 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           onSaved={(p, isNew) => {
             setParking((prev) => isNew ? [...prev, p] : prev.map((x) => x.id === p.id ? p : x));
             setEditingParking(null);
+            toast('Parking saved');
           }}
-          onDeleted={(id) => { setParking((prev) => prev.filter((x) => x.id !== id)); setEditingParking(null); }}
+          onDeleted={(id) => { setParking((prev) => prev.filter((x) => x.id !== id)); setEditingParking(null); toast('Parking deleted'); }}
           onClose={() => setEditingParking(null)}
         />
       )}
@@ -342,8 +360,9 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           onSaved={(c, isNew) => {
             setRentalCars((prev) => isNew ? [...prev, c] : prev.map((x) => x.id === c.id ? c : x));
             setEditingRentalCar(null);
+            toast('Rental car saved');
           }}
-          onDeleted={(id) => { setRentalCars((prev) => prev.filter((x) => x.id !== id)); setEditingRentalCar(null); }}
+          onDeleted={(id) => { setRentalCars((prev) => prev.filter((x) => x.id !== id)); setEditingRentalCar(null); toast('Rental car deleted'); }}
           onClose={() => setEditingRentalCar(null)}
         />
       )}
@@ -355,8 +374,9 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           onSaved={(t, isNew) => {
             setTransit((prev) => isNew ? [...prev, t] : prev.map((x) => x.id === t.id ? t : x));
             setEditingTransit(null);
+            toast('Transit saved');
           }}
-          onDeleted={(id) => { setTransit((prev) => prev.filter((x) => x.id !== id)); setEditingTransit(null); }}
+          onDeleted={(id) => { setTransit((prev) => prev.filter((x) => x.id !== id)); setEditingTransit(null); toast('Transit deleted'); }}
           onClose={() => setEditingTransit(null)}
         />
       )}

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { PlacesInput } from '@/components/itinerary/PlacesInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImagePlus, Home } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 
 export default function NewTripPage() {
   const router = useRouter();
@@ -59,10 +60,10 @@ export default function NewTripPage() {
           fd.append('file', coverFile);
           const imgRes = await fetch(`/api/trips/${trip.id}/cover-image`, { method: 'POST', body: fd });
           if (!imgRes.ok) {
-            window.alert('Your trip was created, but the cover photo failed to upload. You can add it again from Edit Trip.');
+            toast('Trip created, but the cover photo failed to upload. Add it from Edit Trip.', 'error');
           }
         } catch {
-          window.alert('Your trip was created, but the cover photo failed to upload. You can add it again from Edit Trip.');
+          toast('Trip created, but the cover photo failed to upload. Add it from Edit Trip.', 'error');
         }
       }
       router.push(`/trips/${trip.id}`);

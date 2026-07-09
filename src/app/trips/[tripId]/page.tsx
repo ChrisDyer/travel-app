@@ -8,6 +8,7 @@ import { ItineraryDocument } from '@/components/itinerary/ItineraryDocument';
 import { TripWeather } from '@/components/itinerary/TripWeather';
 import { PackingChecklist } from '@/components/itinerary/PackingChecklist';
 import { TripHeaderActions } from '@/components/trips/TripHeaderActions';
+import { TripStatusNudge } from '@/components/trips/TripStatusNudge';
 import { Trip, TripDay, TripEvent, PackingItem, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
 import { statusColors, statusLabel } from '@/lib/trip-status';
 
@@ -61,6 +62,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
       </header>
 
       <main className="max-w-[1400px] mx-auto px-6 py-10">
+        <TripStatusNudge trip={trip} />
         <TripWeather tripId={tripId} />
         <ItineraryDocument
           key={trip.updatedAt as string}
