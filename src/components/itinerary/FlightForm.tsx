@@ -34,10 +34,23 @@ export function FlightForm({ tripId, flight, onSaved, onDeleted, onClose }: Flig
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
-    setLoading(true);
     const form = new FormData(e.currentTarget);
 
-    const arrDate = (form.get('arrivalDate') as string) || depDate || null;
+    const arrivalDateInput = form.get('arrivalDate') as string;
+    if (arrivalDateInput && depDate && arrivalDateInput < depDate) {
+      setError("Arrival date can't be before the departure date.");
+      return;
+    }
+    if (isRoundTrip) {
+      const returnDepartureDate = form.get('returnDepartureDate') as string;
+      if (returnDepartureDate && depDate && returnDepartureDate < depDate) {
+        setError("Return can't depart before the outbound flight.");
+        return;
+      }
+    }
+
+    setLoading(true);
+    const arrDate = arrivalDateInput || depDate || null;
 
     const body: Record<string, unknown> = {
       tripType,

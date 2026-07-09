@@ -35,7 +35,7 @@ export function TripCostSummary({ trip, events, flights, hotels, parking, rental
     const key = (currency ?? 'USD').toUpperCase();
     totals.set(key, (totals.get(key) ?? 0) + cost);
   };
-  for (const e of events) add(e.cost, e.currency);
+  for (const e of events) { if (e.category !== 'note') add(e.cost, e.currency); }
   for (const f of flights) add(f.cost, f.currency);
   for (const h of hotels) add(h.cost, h.currency);
   for (const p of parking) add(p.cost, p.currency);
@@ -96,7 +96,10 @@ export function TripCostSummary({ trip, events, flights, hotels, parking, rental
         </div>
       )}
       {grandTotal == null && needsConversion && (
-        <p className="mt-2 text-xs text-stone-400">Multiple currencies — conversion unavailable right now.</p>
+        <p className="mt-2 text-xs text-amber-600">
+          Currency conversion is unavailable right now — totals above are shown per currency.
+          {budget != null ? ' Budget comparison will return when rates are back.' : ''}
+        </p>
       )}
 
       {budget != null && (

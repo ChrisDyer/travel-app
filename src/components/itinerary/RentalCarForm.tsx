@@ -30,9 +30,16 @@ export function RentalCarForm({ tripId, rentalCar, onSaved, onDeleted, onClose }
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
-    setLoading(true);
     const form = new FormData(e.currentTarget);
 
+    const pickupDate = form.get('pickupDate') as string;
+    const dropoffDate = form.get('dropoffDate') as string;
+    if (pickupDate && dropoffDate && dropoffDate < pickupDate) {
+      setError("Drop-off date can't be before pick-up.");
+      return;
+    }
+
+    setLoading(true);
     const body = {
       company: form.get('company'),
       carClass: form.get('carClass') || null,

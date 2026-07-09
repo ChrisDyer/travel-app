@@ -30,9 +30,16 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
-    setLoading(true);
     const form = new FormData(e.currentTarget);
 
+    const startDate = form.get('startDate') as string;
+    const endDate = form.get('endDate') as string;
+    if (startDate && endDate && endDate < startDate) {
+      setError("Pick-up date can't be before drop-off.");
+      return;
+    }
+
+    setLoading(true);
     const body = {
       location: form.get('location'),
       address: form.get('address') || null,

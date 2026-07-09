@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, camelize, camelizeAll } from '@/db';
 import { getUserId } from '@/lib/auth';
 import { requireFields, withErrorHandling } from '@/lib/api-helpers';
+import { datesBetween } from '@/lib/dates';
 import type { Trip, TripDay } from '@/types/travel';
 
 export const GET = withErrorHandling(async (request: Request) => {
@@ -41,8 +42,6 @@ export const POST = withErrorHandling(async (request: Request) => {
          typeof travelers === 'string' ? travelers : JSON.stringify(travelers),
          notes, budget, budgetCurrency, now, now) as Record<string, unknown>;
 
-  const start = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
   const insertDay = db.prepare(
     'INSERT INTO trip_days (id, trip_id, date, day_number) VALUES (?, ?, ?, ?)'
   );
@@ -50,10 +49,9 @@ export const POST = withErrorHandling(async (request: Request) => {
     for (const day of days) insertDay.run(day.id, day.tripId, day.date, day.dayNumber);
   });
 
-  const days: TripDay[] = [];
-  for (let d = new Date(start), i = 1; d <= end; d.setDate(d.getDate() + 1), i++) {
-    days.push({ id: crypto.randomUUID(), tripId: id, date: d.toISOString().split('T')[0], dayNumber: i } as TripDay);
-  }
+  const days: TripDay[] = datesBetween(startDate, endDate).map((date, i) => ({
+    id: crypto.randomUUID(), tripId: id, date, dayNumber: i + 1,
+  } as TripDay));
   if (days.length > 0) insertDays(days);
 
   return NextResponse.json(camelize<Trip>(trip), { status: 201 });

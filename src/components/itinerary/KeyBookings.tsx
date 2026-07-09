@@ -113,11 +113,11 @@ export function KeyBookings({
   const [editingTransit, setEditingTransit] = useState<TripTransit | null>(null);
   const [addingTransit, setAddingTransit] = useState(false);
 
-  const [flightsOpen, setFlightsOpen] = useState(false);
-  const [hotelsOpen, setHotelsOpen] = useState(false);
-  const [parkingOpen, setParkingOpen] = useState(false);
-  const [rentalCarsOpen, setRentalCarsOpen] = useState(false);
-  const [transitOpen, setTransitOpen] = useState(false);
+  const [flightsOpen, setFlightsOpen] = useState(flights.length > 0);
+  const [hotelsOpen, setHotelsOpen] = useState(hotels.length > 0);
+  const [parkingOpen, setParkingOpen] = useState(parking.length > 0);
+  const [rentalCarsOpen, setRentalCarsOpen] = useState(rentalCars.length > 0);
+  const [transitOpen, setTransitOpen] = useState(transit.length > 0);
 
   function handleFlightSaved(f: TripFlight, isNew: boolean) {
     onFlightsChange(isNew ? [...flights, f] : flights.map((x) => x.id === f.id ? f : x));

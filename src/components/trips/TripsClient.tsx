@@ -27,6 +27,12 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
   function handleSaved(updated: Trip) {
     setTripList((prev) => prev.map((t) => t.id === updated.id ? updated : t));
     setEditing(null);
+    router.refresh();
+  }
+
+  function handleUpdated(updated: Trip) {
+    setTripList((prev) => prev.map((t) => t.id === updated.id ? updated : t));
+    setEditing((prev) => (prev && prev.id === updated.id ? updated : prev)); // keep dialog open with fresh data
   }
 
   function handleDeleted(tripId: string) {
@@ -87,6 +93,7 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
         <TripEditForm
           trip={editing}
           onSaved={handleSaved}
+          onUpdated={handleUpdated}
           onDeleted={handleDeleted}
           onClose={() => setEditing(null)}
         />

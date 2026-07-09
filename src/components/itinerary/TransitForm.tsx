@@ -39,9 +39,16 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
-    setLoading(true);
     const form = new FormData(e.currentTarget);
 
+    const departureDate = form.get('departureDate') as string;
+    const arrivalDate = form.get('arrivalDate') as string;
+    if (departureDate && arrivalDate && arrivalDate < departureDate) {
+      setError("Arrival date can't be before the departure date.");
+      return;
+    }
+
+    setLoading(true);
     const body = {
       transitType: form.get('transitType') || null,
       operator: form.get('operator'),

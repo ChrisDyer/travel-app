@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, camelize } from '@/db';
 import { getUserId } from '@/lib/auth';
 import { withErrorHandling } from '@/lib/api-helpers';
+import { datesBetween } from '@/lib/dates';
 import type { Trip } from '@/types/travel';
 
 export const GET = withErrorHandling(async (request: Request, { params }: { params: Promise<{ tripId: string }> }) => {
@@ -50,13 +51,7 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: { pa
     (typeof body.endDate === 'string' && body.endDate !== before.end_date);
   if (datesChanged) {
     const t = camelize<Trip>(trip);
-    const start = new Date(t.startDate + 'T00:00:00');
-    const end = new Date(t.endDate + 'T00:00:00');
-
-    const expectedDates: string[] = [];
-    for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      expectedDates.push(d.toISOString().split('T')[0]);
-    }
+    const expectedDates: string[] = datesBetween(t.startDate, t.endDate);
 
     const existingDays = db.prepare('SELECT * FROM trip_days WHERE trip_id = ?').all(tripId) as { id: string; date: string }[];
     const toDelete = existingDays.filter((d) => !expectedDates.includes(d.date));

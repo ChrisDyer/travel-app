@@ -35,7 +35,8 @@ export function TripHeaderActions({ trip }: TripHeaderActionsProps) {
       {editing && (
         <TripEditForm
           trip={trip}
-          onSaved={(_updated) => { setEditing(false); router.refresh(); }}
+          onSaved={() => { setEditing(false); router.refresh(); }}
+          onUpdated={() => router.refresh()}
           onDeleted={() => router.push('/trips')}
           onClose={() => setEditing(false)}
         />

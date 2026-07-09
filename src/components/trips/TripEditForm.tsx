@@ -16,11 +16,13 @@ const statuses: TripStatus[] = ['planning', 'confirmed', 'in-progress', 'complet
 interface TripEditFormProps {
   trip: Trip;
   onSaved: (trip: Trip) => void;
+  /** Data changed outside the main form flow (e.g. cover photo) — update caches, do NOT close. */
+  onUpdated?: (trip: Trip) => void;
   onDeleted: (tripId: string) => void;
   onClose: () => void;
 }
 
-export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditFormProps) {
+export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: TripEditFormProps) {
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -223,7 +225,7 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
           <CoverImageUpload
             tripId={trip.id}
             currentUrl={trip.coverImageUrl}
-            onChanged={(url) => onSaved({ ...trip, coverImageUrl: url })}
+            onChanged={(url) => onUpdated?.({ ...trip, coverImageUrl: url })}
           />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
