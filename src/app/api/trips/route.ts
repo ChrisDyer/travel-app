@@ -12,16 +12,30 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const userId = getUserId(request);
   const body = await request.json();
-  const { title, destination, startDate, endDate, status = 'planning' } = body;
+  const {
+    title, destination, startDate, endDate,
+    status = 'planning',
+    travelMode = 'fly',
+    rentalCarNeeded = false,
+    travelers = '[]',
+    notes = null,
+    budget = null,
+    budgetCurrency = null,
+  } = body;
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
   const trip = db.prepare(`
-    INSERT INTO trips (id, user_id, title, destination, start_date, end_date, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO trips (id, user_id, title, destination, start_date, end_date, status,
+                       travel_mode, rental_car_needed, travelers, notes, budget, budget_currency,
+                       created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
-  `).get(id, userId, title, destination, startDate, endDate, status, now, now) as Record<string, unknown>;
+  `).get(id, userId, title, destination, startDate, endDate, status,
+         travelMode, rentalCarNeeded ? 1 : 0,
+         typeof travelers === 'string' ? travelers : JSON.stringify(travelers),
+         notes, budget, budgetCurrency, now, now) as Record<string, unknown>;
 
   const start = new Date(startDate + 'T00:00:00');
   const end = new Date(endDate + 'T00:00:00');

@@ -16,6 +16,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ tr
   const userId = getUserId(request);
   const body = await request.json();
 
+  const before = db.prepare('SELECT start_date, end_date FROM trips WHERE id = ? AND user_id = ?')
+    .get(tripId, userId) as { start_date: string; end_date: string } | undefined;
+  if (!before) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
   // Build SET clause dynamically from body keys
   const colMap: Record<string, string> = {
     title: 'title', destination: 'destination', startDate: 'start_date', endDate: 'end_date',
@@ -26,7 +30,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ tr
   const setClauses: string[] = ['updated_at = ?'];
   const values: unknown[] = [new Date().toISOString()];
   for (const [key, col] of Object.entries(colMap)) {
-    if (key in body) { setClauses.push(`${col} = ?`); values.push(body[key]); }
+    if (key in body) {
+      const val = body[key];
+      setClauses.push(`${col} = ?`);
+      values.push(typeof val === 'boolean' ? (val ? 1 : 0) : val);
+    }
   }
   values.push(tripId, userId);
 
@@ -36,7 +44,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ tr
   if (!trip) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   // Reconcile trip_days when dates change
-  if (body.startDate || body.endDate) {
+  const datesChanged =
+    (typeof body.startDate === 'string' && body.startDate !== before.start_date) ||
+    (typeof body.endDate === 'string' && body.endDate !== before.end_date);
+  if (datesChanged) {
     const t = camelize<Trip>(trip);
     const start = new Date(t.startDate + 'T00:00:00');
     const end = new Date(t.endDate + 'T00:00:00');

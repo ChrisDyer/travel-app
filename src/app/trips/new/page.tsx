@@ -40,6 +40,9 @@ export default function NewTripPage() {
       status: form.get('status'),
       travelMode,
       rentalCarNeeded,
+      travelers: JSON.stringify(
+        ((form.get('travelers') as string) ?? '').split(',').map((t) => t.trim()).filter(Boolean)
+      ),
     };
 
     const res = await fetch('/api/trips', {
@@ -89,6 +92,11 @@ export default function NewTripPage() {
           <div className="space-y-1.5">
             <Label htmlFor="destination">Destination</Label>
             <PlacesInput id="destination" name="destination" placeholder="Rome, Florence, Venice" required />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="travelers">Travelers</Label>
+            <Input id="travelers" name="travelers" placeholder="Chris, Sam (comma-separated)" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

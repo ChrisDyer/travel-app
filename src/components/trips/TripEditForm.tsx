@@ -27,6 +27,10 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
   const [error, setError] = useState('');
   const [travelMode, setTravelMode] = useState<'fly' | 'drive'>(trip.travelMode ?? 'fly');
   const [rentalCarNeeded, setRentalCarNeeded] = useState(!!trip.rentalCarNeeded);
+  const [digestEnabled, setDigestEnabled] = useState(!!trip.digestEnabled);
+
+  let initialTravelers = '';
+  try { initialTravelers = (JSON.parse((trip.travelers as string) ?? '[]') as string[]).join(', '); } catch { /* keep '' */ }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,7 +44,7 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
       return;
     }
     if (startDate && endDate && endDate < trip.endDate) {
-      const proceed = window.confirm('Shortening the trip will remove days from the end. Events on removed days will be hidden. Continue?');
+      const proceed = window.confirm('Shortening the trip will remove days from the end. Any events on removed days will be PERMANENTLY DELETED. Continue?');
       if (!proceed) return;
     }
 
@@ -56,6 +60,11 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
       budget: form.get('budget') ? Number(form.get('budget')) : null,
       budgetCurrency: (form.get('budgetCurrency') as string)?.trim().toUpperCase() || null,
       notes: form.get('notes') || null,
+      travelers: JSON.stringify(
+        ((form.get('travelers') as string) ?? '').split(',').map((t) => t.trim()).filter(Boolean)
+      ),
+      digestEnabled,
+      digestDayOfWeek: Number(form.get('digestDayOfWeek') ?? trip.digestDayOfWeek ?? 1),
     };
     const res = await fetch(`/api/trips/${trip.id}`, {
       method: 'PATCH',
@@ -95,6 +104,11 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
           <div className="space-y-1.5">
             <Label htmlFor="destination">Destination <span className="text-red-400">*</span></Label>
             <PlacesInput id="destination" name="destination" defaultValue={trip.destination} required placeholder="Rome, Florence, Venice" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="travelers">Travelers</Label>
+            <Input id="travelers" name="travelers" defaultValue={initialTravelers} placeholder="Chris, Sam (comma-separated)" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -165,6 +179,29 @@ export function TripEditForm({ trip, onSaved, onDeleted, onClose }: TripEditForm
           <div className="space-y-1.5">
             <Label htmlFor="notes">Notes</Label>
             <Textarea id="notes" name="notes" defaultValue={trip.notes ?? ''} rows={3} placeholder="Any trip notes…" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="digestEnabled"
+                checked={digestEnabled}
+                onChange={(e) => setDigestEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-stone-300 accent-blue-600"
+              />
+              <Label htmlFor="digestEnabled" className="cursor-pointer">Weekly email digest</Label>
+            </div>
+            {digestEnabled && (
+              <Select name="digestDayOfWeek" defaultValue={String(trip.digestDayOfWeek ?? 1)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((d, i) => (
+                    <SelectItem key={d} value={String(i)}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <CoverImageUpload

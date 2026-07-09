@@ -9,6 +9,7 @@ import { TripWeather } from '@/components/itinerary/TripWeather';
 import { PackingChecklist } from '@/components/itinerary/PackingChecklist';
 import { TripHeaderActions } from '@/components/trips/TripHeaderActions';
 import { Trip, TripDay, TripEvent, PackingItem, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
+import { statusColors, statusLabel } from '@/lib/trip-status';
 
 export default async function TripPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
@@ -42,7 +43,12 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
           </a>
           <Link href="/trips" className="text-stone-400 hover:text-stone-700 text-sm">← Trips</Link>
           <div>
-            <h1 className="text-xl font-serif font-bold text-stone-900">{trip.title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-serif font-bold text-stone-900">{trip.title}</h1>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${statusColors[trip.status] ?? statusColors.planning}`}>
+                {statusLabel(trip.status)}
+              </span>
+            </div>
             <p className="text-sm text-stone-500">{trip.destination} · {formatDateRange(trip.startDate, trip.endDate)}</p>
           </div>
         </div>

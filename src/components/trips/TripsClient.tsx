@@ -7,13 +7,7 @@ import { Trip } from '@/types/travel';
 import { Button } from '@/components/ui/button';
 import { TripEditForm } from './TripEditForm';
 import { Pencil } from 'lucide-react';
-
-const statusColors: Record<string, string> = {
-  planning: 'bg-blue-100 text-blue-800',
-  confirmed: 'bg-green-100 text-green-800',
-  'in-progress': 'bg-amber-100 text-amber-800',
-  completed: 'bg-stone-100 text-stone-600',
-};
+import { statusColors } from '@/lib/trip-status';
 
 function formatDateRange(start: string, end: string) {
   const s = new Date(start + 'T00:00:00');
