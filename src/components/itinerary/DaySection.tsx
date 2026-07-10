@@ -7,6 +7,7 @@ import { BrandLogo } from './BrandLogo';
 import { Button } from '@/components/ui/button';
 import { getMapsUrl } from '@/lib/maps';
 import { MapPin } from 'lucide-react';
+import { fmt12, fmtWeekdayParts } from '@/lib/dates';
 
 interface DaySectionProps {
   day: TripDay;
@@ -30,22 +31,6 @@ interface DaySectionProps {
   onReorderEvent?: (eventId: string, direction: 'up' | 'down') => void;
 }
 
-function fmt12(time: string | null) {
-  if (!time) return null;
-  const [h, m] = time.split(':').map(Number);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
-}
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return {
-    weekday: d.toLocaleDateString('en-US', { weekday: 'long' }),
-    date: d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
-  };
-}
-
 const transitTypeIcon: Record<string, string> = {
   train: '🚆', bus: '🚌', ferry: '⛴️', subway: '🚇', shuttle: '🚐', taxi: '🚕', rideshare: '🚗', other: '🚌',
 };
@@ -59,7 +44,7 @@ type TimelineItem =
   | { kind: 'transit'; time: string | null; transit: TripTransit };
 
 export function DaySection({ day, events, dayFlights, dayHotels, dayParking, dayRentalCars, dayTransit, isSelected, onSelectDay, onDayTitleChanged, onDayNotesChanged, onAddEvent, onEditEvent, onEditFlight, onEditHotel, onEditParking, onEditRentalCar, onEditTransit, onReorderEvent }: DaySectionProps) {
-  const { weekday, date } = formatDate(day.date);
+  const { weekday, date } = fmtWeekdayParts(day.date);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(day.title ?? '');
   const titleInputRef = useRef<HTMLInputElement>(null);

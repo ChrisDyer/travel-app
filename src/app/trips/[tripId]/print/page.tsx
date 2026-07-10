@@ -3,6 +3,7 @@ import { db, camelize, camelizeAll } from '@/db';
 import { getServerUserId } from '@/lib/auth';
 import { TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, BookingStatus, PackingCategory, PackingItem } from '@/types/travel';
 import { PrintTrigger } from './PrintTrigger';
+import { fmt12, formatDateRange } from '@/lib/dates';
 
 const eventIcons: Record<string, string> = {
   flight: '✈', hotel: '🏨', restaurant: '🍽', activity: '🎯', transport: '🚗', parking: '🅿️', note: '📝',
@@ -11,19 +12,6 @@ const eventIcons: Record<string, string> = {
 const statusLabels: Record<BookingStatus, string> = {
   confirmed: 'Confirmed', pending: 'Pending', unbooked: 'Needs Booking',
 };
-
-function fmt12(time: string | null | undefined) {
-  if (!time) return null;
-  const [h, m] = time.split(':').map(Number);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
-}
-
-function formatDateRange(start: string, end: string) {
-  const s = new Date(start + 'T00:00:00');
-  const e = new Date(end + 'T00:00:00');
-  return `${s.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${e.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
-}
 
 export default async function PrintPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
@@ -162,7 +150,7 @@ export default async function PrintPage({ params }: { params: Promise<{ tripId: 
       <div className="mb-10 pb-8 border-b-2 border-stone-200">
         <h1 className="text-5xl font-serif font-bold text-stone-900">{trip.title}</h1>
         <p className="text-2xl text-stone-500 mt-2">{trip.destination}</p>
-        <p className="text-stone-400 mt-1">{formatDateRange(trip.startDate, trip.endDate)}</p>
+        <p className="text-stone-400 mt-1">{formatDateRange(trip.startDate, trip.endDate, 'long')}</p>
       </div>
 
       {/* Key Bookings Summary */}

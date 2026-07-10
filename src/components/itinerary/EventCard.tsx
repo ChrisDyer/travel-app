@@ -6,6 +6,7 @@ import { BrandLogo } from './BrandLogo';
 import { getLogoPath } from '@/lib/logos';
 import { getMapsUrl } from '@/lib/maps';
 import { MapPin } from 'lucide-react';
+import { fmt12 } from '@/lib/dates';
 
 const categoryIcons: Record<string, string> = {
   flight: '✈',
@@ -22,12 +23,6 @@ interface EventCardProps {
   onEdit: (event: TripEvent) => void;
   onMoveUp?: () => void;    // provided only when the card can move up
   onMoveDown?: () => void;  // provided only when the card can move down
-}
-
-function fmt12(time: string) {
-  const [h, m] = time.split(':').map(Number);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
 function logoName(title: string): string {

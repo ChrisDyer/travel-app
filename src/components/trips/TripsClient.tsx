@@ -11,12 +11,7 @@ import { TripEditForm } from './TripEditForm';
 import { Pencil, Copy } from 'lucide-react';
 import { statusColors, statusLabel, tripTiming, localToday } from '@/lib/trip-status';
 import { toast } from '@/components/ui/toast';
-
-function formatDateRange(start: string, end: string) {
-  const s = new Date(start + 'T00:00:00');
-  const e = new Date(end + 'T00:00:00');
-  return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-}
+import { formatDateRange } from '@/lib/dates';
 
 type SortKey = 'startDate-desc' | 'startDate-asc' | 'created-desc';
 

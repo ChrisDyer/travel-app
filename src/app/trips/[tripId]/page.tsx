@@ -11,6 +11,7 @@ import { TripHeaderActions } from '@/components/trips/TripHeaderActions';
 import { TripStatusNudge } from '@/components/trips/TripStatusNudge';
 import { Trip, TripDay, TripEvent, PackingItem, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
 import { statusColors, statusLabel } from '@/lib/trip-status';
+import { formatDateRange } from '@/lib/dates';
 
 export default async function TripPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
@@ -29,12 +30,6 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
   const rentalCars = camelizeAll<TripRentalCar>(db.prepare('SELECT * FROM trip_rental_cars WHERE trip_id = ? ORDER BY pickup_date ASC, pickup_time ASC').all(tripId) as Record<string, unknown>[]);
   const transitItems = camelizeAll<TripTransit>(db.prepare('SELECT * FROM trip_transit WHERE trip_id = ? ORDER BY departure_date ASC, departure_time ASC').all(tripId) as Record<string, unknown>[]);
 
-  function formatDateRange(start: string, end: string) {
-    const s = new Date(start + 'T00:00:00');
-    const e = new Date(end + 'T00:00:00');
-    return `${s.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${e.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
-  }
-
   return (
     <div className="min-h-screen bg-stone-50">
       <header className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between no-print">
@@ -50,7 +45,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
                 {statusLabel(trip.status)}
               </span>
             </div>
-            <p className="text-sm text-stone-500">{trip.destination} · {formatDateRange(trip.startDate, trip.endDate)}</p>
+            <p className="text-sm text-stone-500">{trip.destination} · {formatDateRange(trip.startDate, trip.endDate, 'long')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

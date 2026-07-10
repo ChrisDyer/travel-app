@@ -14,6 +14,7 @@ import { BrandLogo } from './BrandLogo';
 import { getMapsUrl } from '@/lib/maps';
 import { ChevronDown, MapPin } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { fmt12, fmtShortDate } from '@/lib/dates';
 
 interface KeyBookingsProps {
   tripId: string;
@@ -31,19 +32,6 @@ interface KeyBookingsProps {
   onTransitChange: (transit: TripTransit[]) => void;
 }
 
-function fmt12(time: string | null) {
-  if (!time) return null;
-  const [h, m] = time.split(':').map(Number);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
-}
-
-function fmtDate(date: string | null) {
-  if (!date) return null;
-  return new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-}
-
 const statusBorder: Record<BookingStatus, string> = {
   confirmed: 'border-emerald-200 bg-emerald-50',
   pending:   'border-amber-200 bg-amber-50',
@@ -55,7 +43,7 @@ function LegRow({ label, flightNum, date, depTime, arrTime, conf, seats }: {
   depTime?: string | null; arrTime?: string | null; conf?: string | null; seats?: string | null;
 }) {
   const parts = [
-    fmtDate(date ?? null),
+    fmtShortDate(date ?? null),
     depTime || arrTime ? [fmt12(depTime ?? null), fmt12(arrTime ?? null)].filter(Boolean).join(' → ') : null,
     conf ? `Conf: ${conf}` : null,
     seats ? `Seats: ${seats}` : null,
@@ -231,10 +219,10 @@ export function KeyBookings({
                   )}
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                     {(h.checkInDate || h.checkInTime) && (
-                      <span className="text-xs text-stone-500">Check-in: {fmtDate(h.checkInDate)}{h.checkInTime ? ` @ ${fmt12(h.checkInTime)}` : ''}</span>
+                      <span className="text-xs text-stone-500">Check-in: {fmtShortDate(h.checkInDate)}{h.checkInTime ? ` @ ${fmt12(h.checkInTime)}` : ''}</span>
                     )}
                     {(h.checkOutDate || h.checkOutTime) && (
-                      <span className="text-xs text-stone-500">Check-out: {fmtDate(h.checkOutDate)}{h.checkOutTime ? ` @ ${fmt12(h.checkOutTime)}` : ''}</span>
+                      <span className="text-xs text-stone-500">Check-out: {fmtShortDate(h.checkOutDate)}{h.checkOutTime ? ` @ ${fmt12(h.checkOutTime)}` : ''}</span>
                     )}
                     {h.roomType && <span className="text-xs text-stone-400">{h.roomType}</span>}
                     {h.confirmationNumber && <span className="text-xs text-stone-400">Conf: {h.confirmationNumber}</span>}
@@ -280,10 +268,10 @@ export function KeyBookings({
                   )}
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                     {(p.startDate || (p.startTime && p.startTime !== '00:00')) && (
-                      <span className="text-xs text-stone-500">Drop-off: {fmtDate(p.startDate)}{p.startTime && p.startTime !== '00:00' ? ` @ ${fmt12(p.startTime)}` : ''}</span>
+                      <span className="text-xs text-stone-500">Drop-off: {fmtShortDate(p.startDate)}{p.startTime && p.startTime !== '00:00' ? ` @ ${fmt12(p.startTime)}` : ''}</span>
                     )}
                     {(p.endDate || (p.endTime && p.endTime !== '00:00')) && (
-                      <span className="text-xs text-stone-500">Pick-up: {fmtDate(p.endDate)}{p.endTime && p.endTime !== '00:00' ? ` @ ${fmt12(p.endTime)}` : ''}</span>
+                      <span className="text-xs text-stone-500">Pick-up: {fmtShortDate(p.endDate)}{p.endTime && p.endTime !== '00:00' ? ` @ ${fmt12(p.endTime)}` : ''}</span>
                     )}
                     {p.vendor && <span className="text-xs text-stone-400">{p.vendor}</span>}
                     {p.confirmationNumber && <span className="text-xs text-stone-400">Conf: {p.confirmationNumber}</span>}
@@ -322,11 +310,11 @@ export function KeyBookings({
                     </p>
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                     {(c.pickupDate || c.pickupTime) && (
-                      <span className="text-xs text-stone-500">Pick-up: {fmtDate(c.pickupDate)}{c.pickupTime ? ` @ ${fmt12(c.pickupTime)}` : ''}</span>
+                      <span className="text-xs text-stone-500">Pick-up: {fmtShortDate(c.pickupDate)}{c.pickupTime ? ` @ ${fmt12(c.pickupTime)}` : ''}</span>
                     )}
                     {c.pickupLocation && <span className="text-xs text-stone-400">{c.pickupLocation}</span>}
                     {(c.dropoffDate || c.dropoffTime) && (
-                      <span className="text-xs text-stone-500">Drop-off: {fmtDate(c.dropoffDate)}{c.dropoffTime ? ` @ ${fmt12(c.dropoffTime)}` : ''}</span>
+                      <span className="text-xs text-stone-500">Drop-off: {fmtShortDate(c.dropoffDate)}{c.dropoffTime ? ` @ ${fmt12(c.dropoffTime)}` : ''}</span>
                     )}
                     {c.confirmationNumber && <span className="text-xs text-stone-400">Conf: {c.confirmationNumber}</span>}
                     {c.driverName && <span className="text-xs text-stone-400">Driver: {c.driverName}</span>}
@@ -366,7 +354,7 @@ export function KeyBookings({
                       <span className="text-xs text-stone-500">{t.fromLocation}{t.fromLocation && t.toLocation ? ' → ' : ''}{t.toLocation}</span>
                     )}
                     {(t.departureDate || t.departureTime) && (
-                      <span className="text-xs text-stone-500">Dep: {fmtDate(t.departureDate)}{t.departureTime ? ` @ ${fmt12(t.departureTime)}` : ''}</span>
+                      <span className="text-xs text-stone-500">Dep: {fmtShortDate(t.departureDate)}{t.departureTime ? ` @ ${fmt12(t.departureTime)}` : ''}</span>
                     )}
                     {t.confirmationNumber && <span className="text-xs text-stone-400">Conf: {t.confirmationNumber}</span>}
                     {t.seatInfo && <span className="text-xs text-stone-400">{t.seatInfo}</span>}
@@ -390,31 +378,31 @@ export function KeyBookings({
           title: `${f.airline ?? 'Flight'} ${f.tripType === 'round-trip' ? '(Round Trip)' : ''}`,
           sub: f.tripType === 'round-trip'
             ? [
-                `Out: ${[f.flightNumber, fmtDate(f.departureDate), f.departureTime && f.arrivalTime ? `${fmt12(f.departureTime)} → ${fmt12(f.arrivalTime)}` : null, f.confirmationNumber ? `Conf: ${f.confirmationNumber}` : null, f.seats ? `Seats: ${f.seats}` : null].filter(Boolean).join(' · ')}`,
-                f.returnFlightNumber || f.returnDepartureDate ? `Ret: ${[f.returnFlightNumber, fmtDate(f.returnDepartureDate), f.returnDepartureTime && f.returnArrivalTime ? `${fmt12(f.returnDepartureTime)} → ${fmt12(f.returnArrivalTime)}` : null, f.returnConfirmationNumber ? `Conf: ${f.returnConfirmationNumber}` : null, f.returnSeats ? `Seats: ${f.returnSeats}` : null].filter(Boolean).join(' · ')}` : null,
+                `Out: ${[f.flightNumber, fmtShortDate(f.departureDate), f.departureTime && f.arrivalTime ? `${fmt12(f.departureTime)} → ${fmt12(f.arrivalTime)}` : null, f.confirmationNumber ? `Conf: ${f.confirmationNumber}` : null, f.seats ? `Seats: ${f.seats}` : null].filter(Boolean).join(' · ')}`,
+                f.returnFlightNumber || f.returnDepartureDate ? `Ret: ${[f.returnFlightNumber, fmtShortDate(f.returnDepartureDate), f.returnDepartureTime && f.returnArrivalTime ? `${fmt12(f.returnDepartureTime)} → ${fmt12(f.returnArrivalTime)}` : null, f.returnConfirmationNumber ? `Conf: ${f.returnConfirmationNumber}` : null, f.returnSeats ? `Seats: ${f.returnSeats}` : null].filter(Boolean).join(' · ')}` : null,
               ].filter(Boolean).join(' | ')
-            : [f.flightNumber, `${f.departureAirport} → ${f.arrivalAirport}`, fmtDate(f.departureDate), f.departureTime && f.arrivalTime ? `${fmt12(f.departureTime)} → ${fmt12(f.arrivalTime)}` : null, f.confirmationNumber ? `Conf: ${f.confirmationNumber}` : null, f.seats ? `Seats: ${f.seats}` : null].filter(Boolean).join(' · '),
+            : [f.flightNumber, `${f.departureAirport} → ${f.arrivalAirport}`, fmtShortDate(f.departureDate), f.departureTime && f.arrivalTime ? `${fmt12(f.departureTime)} → ${fmt12(f.arrivalTime)}` : null, f.confirmationNumber ? `Conf: ${f.confirmationNumber}` : null, f.seats ? `Seats: ${f.seats}` : null].filter(Boolean).join(' · '),
           status: f.bookingStatus,
         })),
         ...hotels.map((h) => ({
           key: `ph-${h.id}`, icon: '🏨', title: h.name,
-          sub: [h.address, h.checkInDate ? `Check-in: ${fmtDate(h.checkInDate)}${h.checkInTime ? ` @ ${fmt12(h.checkInTime)}` : ''}` : null, h.checkOutDate ? `Check-out: ${fmtDate(h.checkOutDate)}${h.checkOutTime ? ` @ ${fmt12(h.checkOutTime)}` : ''}` : null, h.confirmationNumber ? `Conf: ${h.confirmationNumber}` : null, h.roomType].filter(Boolean).join(' · '),
+          sub: [h.address, h.checkInDate ? `Check-in: ${fmtShortDate(h.checkInDate)}${h.checkInTime ? ` @ ${fmt12(h.checkInTime)}` : ''}` : null, h.checkOutDate ? `Check-out: ${fmtShortDate(h.checkOutDate)}${h.checkOutTime ? ` @ ${fmt12(h.checkOutTime)}` : ''}` : null, h.confirmationNumber ? `Conf: ${h.confirmationNumber}` : null, h.roomType].filter(Boolean).join(' · '),
           status: h.bookingStatus,
         })),
         ...parking.map((p) => ({
           key: `pp-${p.id}`, icon: '🅿️', title: `${p.location}${p.level ? ` · ${p.level}` : ''}`,
-          sub: [p.startDate ? `Drop-off: ${fmtDate(p.startDate)}${p.startTime && p.startTime !== '00:00' ? ` @ ${fmt12(p.startTime)}` : ''}` : null, p.endDate ? `Pick-up: ${fmtDate(p.endDate)}${p.endTime && p.endTime !== '00:00' ? ` @ ${fmt12(p.endTime)}` : ''}` : null, p.confirmationNumber ? `Conf: ${p.confirmationNumber}` : null, p.orderNumber ? `Order: ${p.orderNumber}` : null, p.cost != null ? `${p.currency ?? 'USD'} ${Number(p.cost).toFixed(2)}` : null].filter(Boolean).join(' · '),
+          sub: [p.startDate ? `Drop-off: ${fmtShortDate(p.startDate)}${p.startTime && p.startTime !== '00:00' ? ` @ ${fmt12(p.startTime)}` : ''}` : null, p.endDate ? `Pick-up: ${fmtShortDate(p.endDate)}${p.endTime && p.endTime !== '00:00' ? ` @ ${fmt12(p.endTime)}` : ''}` : null, p.confirmationNumber ? `Conf: ${p.confirmationNumber}` : null, p.orderNumber ? `Order: ${p.orderNumber}` : null, p.cost != null ? `${p.currency ?? 'USD'} ${Number(p.cost).toFixed(2)}` : null].filter(Boolean).join(' · '),
           status: p.bookingStatus,
         })),
         ...rentalCars.map((c) => ({
           key: `pc-${c.id}`, icon: '🚗', title: `${c.company}${c.carClass ? ` · ${c.carClass}` : ''}`,
-          sub: [c.pickupDate ? `Pick-up: ${fmtDate(c.pickupDate)}${c.pickupTime ? ` @ ${fmt12(c.pickupTime)}` : ''}` : null, c.pickupLocation, c.dropoffDate ? `Drop-off: ${fmtDate(c.dropoffDate)}${c.dropoffTime ? ` @ ${fmt12(c.dropoffTime)}` : ''}` : null, c.confirmationNumber ? `Conf: ${c.confirmationNumber}` : null, c.cost != null ? `${c.currency ?? 'USD'} ${Number(c.cost).toFixed(2)}` : null].filter(Boolean).join(' · '),
+          sub: [c.pickupDate ? `Pick-up: ${fmtShortDate(c.pickupDate)}${c.pickupTime ? ` @ ${fmt12(c.pickupTime)}` : ''}` : null, c.pickupLocation, c.dropoffDate ? `Drop-off: ${fmtShortDate(c.dropoffDate)}${c.dropoffTime ? ` @ ${fmt12(c.dropoffTime)}` : ''}` : null, c.confirmationNumber ? `Conf: ${c.confirmationNumber}` : null, c.cost != null ? `${c.currency ?? 'USD'} ${Number(c.cost).toFixed(2)}` : null].filter(Boolean).join(' · '),
           status: c.bookingStatus,
         })),
         ...transit.map((t) => ({
           key: `pt-${t.id}`, icon: t.transitType ? (transitTypeIcon[t.transitType] ?? '🚌') : '🚌',
           title: `${t.operator}${t.routeNumber ? ` · ${t.routeNumber}` : ''}`,
-          sub: [t.fromLocation && t.toLocation ? `${t.fromLocation} → ${t.toLocation}` : (t.fromLocation ?? t.toLocation), t.departureDate ? `Dep: ${fmtDate(t.departureDate)}${t.departureTime ? ` @ ${fmt12(t.departureTime)}` : ''}` : null, t.confirmationNumber ? `Conf: ${t.confirmationNumber}` : null, t.seatInfo, t.cost != null ? `${t.currency ?? 'USD'} ${Number(t.cost).toFixed(2)}` : null].filter(Boolean).join(' · '),
+          sub: [t.fromLocation && t.toLocation ? `${t.fromLocation} → ${t.toLocation}` : (t.fromLocation ?? t.toLocation), t.departureDate ? `Dep: ${fmtShortDate(t.departureDate)}${t.departureTime ? ` @ ${fmt12(t.departureTime)}` : ''}` : null, t.confirmationNumber ? `Conf: ${t.confirmationNumber}` : null, t.seatInfo, t.cost != null ? `${t.currency ?? 'USD'} ${Number(t.cost).toFixed(2)}` : null].filter(Boolean).join(' · '),
           status: t.bookingStatus,
         })),
       ].map(({ key, icon, title, sub, status }) => (
