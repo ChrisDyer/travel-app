@@ -7,8 +7,16 @@ import { Trip, TripStatus } from '@/types/travel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { TripEditForm } from './TripEditForm';
-import { Pencil, Copy } from 'lucide-react';
+import { Pencil, Copy, Trash2, MoreHorizontal } from 'lucide-react';
 import { statusColors, statusLabel, tripTiming, localToday } from '@/lib/trip-status';
 import { toast } from '@/components/ui/toast';
 import { formatDateRange } from '@/lib/dates';
@@ -25,6 +33,8 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
   const [tripList, setTripList] = useState<Trip[]>(initialTrips);
   const [editing, setEditing] = useState<Trip | null>(null);
   const [duplicating, setDuplicating] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Trip | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
 
   const [statusFilter, setStatusFilter] = useState<TripStatus | 'all'>(() => {
@@ -84,6 +94,22 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
     }
   }
 
+  async function handleDelete(trip: Trip) {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      setTripList((prev) => prev.filter((t) => t.id !== trip.id));
+      setConfirmDelete(null);
+      router.refresh();
+      toast('Trip deleted');
+    } catch {
+      toast('Could not delete the trip. Please try again.', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (tripList.length === 0) {
     return (
       <div className="text-center py-24 text-stone-400">
@@ -138,11 +164,11 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search trips…"
-          className="w-48"
+          className="w-full sm:w-48"
         />
 
         <Select value={sort} onValueChange={(v) => { if (v) setSort(v as SortKey); }}>
-          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="startDate-desc">Newest trips first</SelectItem>
             <SelectItem value="startDate-asc">Oldest trips first</SelectItem>
@@ -157,49 +183,75 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
           <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>Clear filters</Button>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((trip) => (
-            <div key={trip.id} className="bg-white rounded-xl border border-stone-200 hover:border-stone-400 hover:shadow-sm transition-all overflow-hidden">
-              <Link href={`/trips/${trip.id}`} className="flex items-stretch">
-                {trip.coverImageUrl && (
-                  <div className="w-32 shrink-0">
-                    <img src={trip.coverImageUrl} alt={trip.title} className="w-full h-full object-cover" />
-                  </div>
-                )}
-                <div className="flex-1 p-6 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h2 className="text-xl font-serif font-semibold text-stone-900">{trip.title}</h2>
-                      <p className="text-stone-500 mt-0.5">{trip.destination}</p>
-                      <p className="text-sm text-stone-400 mt-1">
-                        {formatDateRange(trip.startDate, trip.endDate)} <span className="text-xs text-stone-400">· {tripTiming(trip.startDate, trip.endDate, today)}</span>
-                      </p>
+            <div key={trip.id} className="relative bg-white rounded-xl border border-stone-200 hover:border-stone-400 hover:shadow-sm transition-all overflow-hidden">
+              <Link href={`/trips/${trip.id}`} className="block">
+                <div className="h-36 w-full relative">
+                  {trip.coverImageUrl ? (
+                    <img src={trip.coverImageUrl} alt={trip.title} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-stone-200 to-stone-300 flex items-center justify-center">
+                      <span className="font-serif text-4xl text-stone-400">{trip.destination.charAt(0).toUpperCase()}</span>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${statusColors[trip.status] ?? statusColors.planning}`}>
-                        {trip.status.replace('-', ' ')}
-                      </span>
-                      <button
-                        className="p-1.5 rounded-md text-stone-300 hover:text-stone-600 hover:bg-stone-100 transition-colors"
-                        onClick={(e) => { e.preventDefault(); handleDuplicate(trip); }}
-                        aria-label="Duplicate trip"
-                        disabled={duplicating === trip.id}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </button>
-                      <button
-                        className="p-1.5 rounded-md text-stone-300 hover:text-stone-600 hover:bg-stone-100 transition-colors"
-                        onClick={(e) => { e.preventDefault(); setEditing(trip); }}
-                        aria-label="Edit trip"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
+                  )}
+                  <span className={`absolute bottom-2 left-2 shadow-sm text-xs font-medium px-2.5 py-1 rounded-full capitalize ${statusColors[trip.status] ?? statusColors.planning}`}>
+                    {statusLabel(trip.status)}
+                  </span>
+                </div>
+                <div className="p-4">
+                  <h2 className="text-lg font-serif font-semibold text-stone-900 truncate">{trip.title}</h2>
+                  <p className="text-sm text-stone-500 truncate">{trip.destination}</p>
+                  <p className="text-sm text-stone-400 mt-1">
+                    {formatDateRange(trip.startDate, trip.endDate)} <span className="text-xs text-stone-400">· {tripTiming(trip.startDate, trip.endDate, today)}</span>
+                  </p>
                 </div>
               </Link>
+
+              <div className="no-print absolute top-2 right-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Trip actions"
+                        className="bg-white/80 backdrop-blur rounded-md"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      />
+                    }
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => handleDuplicate(trip)}
+                      disabled={duplicating === trip.id}
+                    >
+                      <Copy className="h-4 w-4" />
+                      Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEditing(trip)}>
+                      <Pencil className="h-4 w-4" />
+                      Edit trip
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(trip)}>
+                      <Trash2 className="h-4 w-4" />
+                      Delete trip
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           ))}
+
+          <Link
+            href="/trips/new"
+            className="flex items-center justify-center rounded-xl border border-dashed border-stone-300 text-stone-400 hover:border-stone-400 hover:text-stone-600 transition-colors min-h-36"
+          >
+            + New trip
+          </Link>
         </div>
       )}
 
@@ -211,6 +263,25 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
           onDeleted={handleDeleted}
           onClose={() => setEditing(null)}
         />
+      )}
+
+      {confirmDelete && (
+        <Dialog open onOpenChange={(open) => { if (!open && !deleting) setConfirmDelete(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete trip?</DialogTitle>
+              <DialogDescription>
+                Delete &quot;{confirmDelete.title}&quot;? This permanently deletes all its days, events, and bookings.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDelete(null)} disabled={deleting}>Cancel</Button>
+              <Button variant="destructive" onClick={() => handleDelete(confirmDelete)} disabled={deleting}>
+                {deleting ? 'Deleting…' : 'Delete'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );
