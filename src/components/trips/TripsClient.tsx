@@ -23,6 +23,12 @@ import { formatDateRange } from '@/lib/dates';
 
 type SortKey = 'startDate-desc' | 'startDate-asc' | 'created-desc';
 
+const sortLabels: Record<SortKey, string> = {
+  'startDate-asc': 'Soonest first',
+  'startDate-desc': 'Furthest out first',
+  'created-desc': 'Recently added',
+};
+
 const statuses: TripStatus[] = ['planning', 'confirmed', 'in-progress', 'completed'];
 
 interface TripsClientProps {
@@ -168,11 +174,13 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
         />
 
         <Select value={sort} onValueChange={(v) => { if (v) setSort(v as SortKey); }}>
-          <SelectTrigger className="w-full sm:w-44"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue>{(value: SortKey) => sortLabels[value] ?? value}</SelectValue>
+          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="startDate-desc">Newest trips first</SelectItem>
-            <SelectItem value="startDate-asc">Oldest trips first</SelectItem>
-            <SelectItem value="created-desc">Recently created</SelectItem>
+            <SelectItem value="startDate-asc">Soonest first</SelectItem>
+            <SelectItem value="startDate-desc">Furthest out first</SelectItem>
+            <SelectItem value="created-desc">Recently added</SelectItem>
           </SelectContent>
         </Select>
       </div>

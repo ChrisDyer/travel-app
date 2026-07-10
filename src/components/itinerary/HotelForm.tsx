@@ -159,7 +159,7 @@ export function HotelForm({ tripId, hotel, onSaved, onDeleted, onClose }: HotelF
             <div className="space-y-1.5">
               <Label>Booking Status</Label>
               <Select name="bookingStatus" defaultValue={hotel?.bookingStatus ?? 'unbooked'}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue className="capitalize" /></SelectTrigger>
                 <SelectContent>
                   {bookingStatuses.map((s) => (
                     <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>

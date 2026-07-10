@@ -166,7 +166,7 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
             <div className="space-y-1.5">
               <Label>Booking Status</Label>
               <Select name="bookingStatus" defaultValue={parking?.bookingStatus ?? 'unbooked'}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue className="capitalize" /></SelectTrigger>
                 <SelectContent>
                   {bookingStatuses.map((s) => (
                     <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>

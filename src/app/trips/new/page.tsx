@@ -10,6 +10,8 @@ import { PlacesInput } from '@/components/itinerary/PlacesInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImagePlus, Home } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { statusLabel } from '@/lib/trip-status';
+import type { TripStatus } from '@/types/travel';
 
 export default function NewTripPage() {
   const router = useRouter();
@@ -115,7 +117,7 @@ export default function NewTripPage() {
             <Label htmlFor="status">Status</Label>
             <Select name="status" defaultValue="planning">
               <SelectTrigger id="status">
-                <SelectValue />
+                <SelectValue className="capitalize">{(v: TripStatus) => statusLabel(v)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="planning">Planning</SelectItem>

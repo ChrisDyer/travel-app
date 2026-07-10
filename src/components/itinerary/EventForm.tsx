@@ -105,7 +105,7 @@ export function EventForm({ tripId, day, days, event, onSaved, onDeleted, onClos
             <div className="space-y-1.5">
               <Label>Category</Label>
               <Select name="category" defaultValue={event?.category ?? 'activity'}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue className="capitalize" /></SelectTrigger>
                 <SelectContent>
                   {categories.map((c) => (
                     <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
@@ -116,7 +116,7 @@ export function EventForm({ tripId, day, days, event, onSaved, onDeleted, onClos
             <div className="space-y-1.5">
               <Label>Booking Status</Label>
               <Select name="bookingStatus" defaultValue={event?.bookingStatus ?? 'unbooked'}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue className="capitalize" /></SelectTrigger>
                 <SelectContent>
                   {bookingStatuses.map((s) => (
                     <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>

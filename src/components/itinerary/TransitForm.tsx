@@ -110,7 +110,11 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
             <div className="space-y-1.5">
               <Label>Type</Label>
               <Select name="transitType" defaultValue={transit?.transitType ?? ''}>
-                <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type">
+                    {(v: TransitType | '') => transitTypes.find((t) => t.value === v)?.label ?? 'Select type'}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   {transitTypes.map((t) => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
@@ -183,7 +187,7 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
             <div className="space-y-1.5">
               <Label>Booking Status</Label>
               <Select name="bookingStatus" defaultValue={transit?.bookingStatus ?? 'unbooked'}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue className="capitalize" /></SelectTrigger>
                 <SelectContent>
                   {bookingStatuses.map((s) => (
                     <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>

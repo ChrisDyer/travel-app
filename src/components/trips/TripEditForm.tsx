@@ -10,8 +10,10 @@ import { PlacesInput } from '@/components/itinerary/PlacesInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { CoverImageUpload } from './CoverImageUpload';
+import { statusLabel } from '@/lib/trip-status';
 
 const statuses: TripStatus[] = ['planning', 'confirmed', 'in-progress', 'completed'];
+const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 interface TripEditFormProps {
   trip: Trip;
@@ -143,10 +145,12 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
           <div className="space-y-1.5">
             <Label>Status</Label>
             <Select name="status" defaultValue={trip.status}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue className="capitalize">{(v: TripStatus) => statusLabel(v)}</SelectValue>
+              </SelectTrigger>
               <SelectContent>
                 {statuses.map((s) => (
-                  <SelectItem key={s} value={s} className="capitalize">{s.replace('-', ' ')}</SelectItem>
+                  <SelectItem key={s} value={s} className="capitalize">{statusLabel(s)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -212,9 +216,11 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
             </div>
             {digestEnabled && (
               <Select name="digestDayOfWeek" defaultValue={String(trip.digestDayOfWeek ?? 1)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue>{(v: string) => weekDays[Number(v)]}</SelectValue>
+                </SelectTrigger>
                 <SelectContent>
-                  {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((d, i) => (
+                  {weekDays.map((d, i) => (
                     <SelectItem key={d} value={String(i)}>{d}</SelectItem>
                   ))}
                 </SelectContent>
