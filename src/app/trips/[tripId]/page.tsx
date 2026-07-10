@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { Home } from 'lucide-react';
 import { db, camelize, camelizeAll } from '@/db';
 import { getServerUserId } from '@/lib/auth';
-import { Button } from '@/components/ui/button';
 import { ItineraryDocument } from '@/components/itinerary/ItineraryDocument';
 import { TripWeather } from '@/components/itinerary/TripWeather';
 import { PackingChecklist } from '@/components/itinerary/PackingChecklist';
@@ -50,9 +49,6 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
         </div>
         <div className="flex items-center gap-2">
           <TripHeaderActions trip={trip} />
-          <Link href={`/trips/${tripId}/print`} target="_blank">
-            <Button variant="outline" size="sm">Print / PDF</Button>
-          </Link>
         </div>
       </header>
 

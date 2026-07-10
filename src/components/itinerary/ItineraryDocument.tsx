@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, PackingItem } from '@/types/travel';
-import { BookingRef } from './booking-selection';
+import { BookingKind, BookingRef } from './booking-selection';
+import { AddPlanMenu } from './AddPlanMenu';
 import { BookingDetailSheet } from './BookingDetailSheet';
 import { DaySection } from './DaySection';
 import { EventForm } from './EventForm';
@@ -52,6 +53,15 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
   const [editingTransit, setEditingTransit] = useState<TripTransit | null>(null);
   const [selectedDay, setSelectedDay] = useState<TripDay | null>(null);
   const [selection, setSelection] = useState<BookingRef | null>(null);
+  const [adding, setAdding] = useState<BookingKind | null>(null);
+
+  function handleAdd(kind: BookingKind) {
+    if (kind === 'event') {
+      setAddingToDay(selectedDay ?? days[0]);
+    } else {
+      setAdding(kind);
+    }
+  }
 
   function handleDayTitleChanged(dayId: string, title: string | null) {
     setDays((prev) => prev.map((d) => d.id === dayId ? { ...d, title } : d));
@@ -233,7 +243,6 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           />
 
           <KeyBookings
-            tripId={trip.id}
             travelMode={trip.travelMode}
             rentalCarNeeded={trip.rentalCarNeeded}
             flights={flights}
@@ -241,11 +250,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
             parking={parking}
             rentalCars={rentalCars}
             transit={transit}
-            onFlightsChange={setFlights}
-            onHotelsChange={setHotels}
-            onParkingChange={setParking}
-            onRentalCarsChange={setRentalCars}
-            onTransitChange={setTransit}
+            onAdd={handleAdd}
             onSelect={(ref) => setSelection(ref)}
           />
 
@@ -271,12 +276,15 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
 
         {/* Right column: daily itinerary */}
         <div className="space-y-12">
+          <div className="flex justify-end">
+            <AddPlanMenu onAdd={handleAdd} />
+          </div>
+
           {isEmpty && (
             <div className="no-print rounded-xl border border-dashed border-stone-300 bg-white p-6 text-center">
               <p className="font-serif text-lg text-stone-700">Let&apos;s plan this trip ✈</p>
               <p className="text-sm text-stone-500 mt-1 max-w-md mx-auto">
-                Add your first flight or hotel from the Key Bookings panel, add events to any day below,
-                or open the Trip Assistant and paste a confirmation email to import bookings automatically.
+                Use <strong>Add a plan</strong> to add flights, hotels, and more — or open the Trip Assistant and paste a confirmation email.
               </p>
             </div>
           )}
@@ -314,73 +322,78 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
         />
       )}
 
-      {editingFlight && (
+      {(editingFlight || adding === 'flight') && (
         <FlightForm
           tripId={trip.id}
           flight={editingFlight}
           onSaved={(f, isNew) => {
             setFlights((prev) => isNew ? [...prev, f] : prev.map((x) => x.id === f.id ? f : x));
             setEditingFlight(null);
+            setAdding(null);
             toast('Flight saved');
           }}
           onDeleted={(id) => { setFlights((prev) => prev.filter((x) => x.id !== id)); setEditingFlight(null); toast('Flight deleted'); }}
-          onClose={() => setEditingFlight(null)}
+          onClose={() => { setEditingFlight(null); setAdding(null); }}
         />
       )}
 
-      {editingHotel && (
+      {(editingHotel || adding === 'hotel') && (
         <HotelForm
           tripId={trip.id}
           hotel={editingHotel}
           onSaved={(h, isNew) => {
             setHotels((prev) => isNew ? [...prev, h] : prev.map((x) => x.id === h.id ? h : x));
             setEditingHotel(null);
+            setAdding(null);
             toast('Hotel saved');
           }}
           onDeleted={(id) => { setHotels((prev) => prev.filter((x) => x.id !== id)); setEditingHotel(null); toast('Hotel deleted'); }}
-          onClose={() => setEditingHotel(null)}
+          onClose={() => { setEditingHotel(null); setAdding(null); }}
         />
       )}
 
-      {editingParking && (
+      {(editingParking || adding === 'parking') && (
         <ParkingForm
           tripId={trip.id}
           parking={editingParking}
           onSaved={(p, isNew) => {
             setParking((prev) => isNew ? [...prev, p] : prev.map((x) => x.id === p.id ? p : x));
             setEditingParking(null);
+            setAdding(null);
             toast('Parking saved');
           }}
           onDeleted={(id) => { setParking((prev) => prev.filter((x) => x.id !== id)); setEditingParking(null); toast('Parking deleted'); }}
-          onClose={() => setEditingParking(null)}
+          onClose={() => { setEditingParking(null); setAdding(null); }}
         />
       )}
 
-      {editingRentalCar && (
+      {(editingRentalCar || adding === 'rentalCar') && (
         <RentalCarForm
           tripId={trip.id}
           rentalCar={editingRentalCar}
           onSaved={(c, isNew) => {
             setRentalCars((prev) => isNew ? [...prev, c] : prev.map((x) => x.id === c.id ? c : x));
             setEditingRentalCar(null);
+            setAdding(null);
             toast('Rental car saved');
           }}
           onDeleted={(id) => { setRentalCars((prev) => prev.filter((x) => x.id !== id)); setEditingRentalCar(null); toast('Rental car deleted'); }}
-          onClose={() => setEditingRentalCar(null)}
+          onClose={() => { setEditingRentalCar(null); setAdding(null); }}
         />
       )}
 
-      {editingTransit && (
+      {(editingTransit || adding === 'transit') && (
         <TransitForm
           tripId={trip.id}
           transit={editingTransit}
           onSaved={(t, isNew) => {
             setTransit((prev) => isNew ? [...prev, t] : prev.map((x) => x.id === t.id ? t : x));
             setEditingTransit(null);
+            setAdding(null);
             toast('Transit saved');
           }}
           onDeleted={(id) => { setTransit((prev) => prev.filter((x) => x.id !== id)); setEditingTransit(null); toast('Transit deleted'); }}
-          onClose={() => setEditingTransit(null)}
+          onClose={() => { setEditingTransit(null); setAdding(null); }}
         />
       )}
 

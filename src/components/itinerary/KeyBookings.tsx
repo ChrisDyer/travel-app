@@ -2,22 +2,15 @@
 
 import { useState } from 'react';
 import { TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, BookingStatus, TripStatus } from '@/types/travel';
-import { BookingRef } from './booking-selection';
+import { BookingKind, BookingRef } from './booking-selection';
 import { Button } from '@/components/ui/button';
 import { BookingStatusBadge } from './BookingStatusBadge';
-import { FlightForm } from './FlightForm';
-import { HotelForm } from './HotelForm';
-import { ParkingForm } from './ParkingForm';
-import { RentalCarForm } from './RentalCarForm';
-import { TransitForm } from './TransitForm';
 import { getLogoPath } from '@/lib/logos';
 import { BrandLogo } from './BrandLogo';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { toast } from '@/components/ui/toast';
 import { fmt12, fmtShortDate } from '@/lib/dates';
 
 interface KeyBookingsProps {
-  tripId: string;
   travelMode: 'fly' | 'drive';
   rentalCarNeeded: boolean;
   flights: TripFlight[];
@@ -25,11 +18,7 @@ interface KeyBookingsProps {
   parking: TripParking[];
   rentalCars: TripRentalCar[];
   transit: TripTransit[];
-  onFlightsChange: (flights: TripFlight[]) => void;
-  onHotelsChange: (hotels: TripHotel[]) => void;
-  onParkingChange: (parking: TripParking[]) => void;
-  onRentalCarsChange: (rentalCars: TripRentalCar[]) => void;
-  onTransitChange: (transit: TripTransit[]) => void;
+  onAdd: (kind: BookingKind) => void;
   onSelect: (ref: BookingRef) => void;
 }
 
@@ -96,57 +85,24 @@ const transitTypeIcon: Record<string, string> = {
 };
 
 export function KeyBookings({
-  tripId,
   travelMode, rentalCarNeeded,
   flights, hotels, parking, rentalCars, transit,
-  onFlightsChange, onHotelsChange, onParkingChange, onRentalCarsChange, onTransitChange,
+  onAdd,
   onSelect,
 }: KeyBookingsProps) {
-  const [addingFlight, setAddingFlight] = useState(false);
-  const [addingHotel, setAddingHotel] = useState(false);
-  const [addingParking, setAddingParking] = useState(false);
-  const [addingRentalCar, setAddingRentalCar] = useState(false);
-  const [addingTransit, setAddingTransit] = useState(false);
-
   const [flightsOpen, setFlightsOpen] = useState(flights.length > 0);
   const [hotelsOpen, setHotelsOpen] = useState(hotels.length > 0);
   const [parkingOpen, setParkingOpen] = useState(parking.length > 0);
   const [rentalCarsOpen, setRentalCarsOpen] = useState(rentalCars.length > 0);
   const [transitOpen, setTransitOpen] = useState(transit.length > 0);
 
-  function handleFlightSaved(f: TripFlight, isNew: boolean) {
-    onFlightsChange(isNew ? [...flights, f] : flights.map((x) => x.id === f.id ? f : x));
-    setAddingFlight(false);
-    toast('Flight saved');
-  }
-  function handleHotelSaved(h: TripHotel, isNew: boolean) {
-    onHotelsChange(isNew ? [...hotels, h] : hotels.map((x) => x.id === h.id ? h : x));
-    setAddingHotel(false);
-    toast('Hotel saved');
-  }
-  function handleParkingSaved(p: TripParking, isNew: boolean) {
-    onParkingChange(isNew ? [...parking, p] : parking.map((x) => x.id === p.id ? p : x));
-    setAddingParking(false);
-    toast('Parking saved');
-  }
-  function handleRentalCarSaved(c: TripRentalCar, isNew: boolean) {
-    onRentalCarsChange(isNew ? [...rentalCars, c] : rentalCars.map((x) => x.id === c.id ? c : x));
-    setAddingRentalCar(false);
-    toast('Rental car saved');
-  }
-  function handleTransitSaved(t: TripTransit, isNew: boolean) {
-    onTransitChange(isNew ? [...transit, t] : transit.map((x) => x.id === t.id ? t : x));
-    setAddingTransit(false);
-    toast('Transit saved');
-  }
-
   return (
     <div className="mb-10">
       <h2 className="text-lg font-semibold text-stone-700 mb-3">Key Bookings</h2>
 
       {/* ── FLIGHTS ── */}
-      {travelMode === 'fly' && <SectionHeader label="Flights" onAdd={() => setAddingFlight(true)} addLabel="Flight" isOpen={flightsOpen} onToggle={() => setFlightsOpen((v) => !v)} />}
-      {travelMode === 'fly' && flightsOpen && <div className="space-y-2">
+      {(travelMode === 'fly' || flights.length > 0) && <SectionHeader label="Flights" onAdd={() => onAdd('flight')} addLabel="Flight" isOpen={flightsOpen} onToggle={() => setFlightsOpen((v) => !v)} />}
+      {(travelMode === 'fly' || flights.length > 0) && flightsOpen && <div className="space-y-2">
         {flights.map((f) => {
           const airlineLogo = getLogoPath(f.airline);
           return (
@@ -199,7 +155,7 @@ export function KeyBookings({
       </div>}
 
       {/* ── HOTELS ── */}
-      <SectionHeader label="Hotels" onAdd={() => setAddingHotel(true)} addLabel="Hotel" isOpen={hotelsOpen} onToggle={() => setHotelsOpen((v) => !v)} />
+      <SectionHeader label="Hotels" onAdd={() => onAdd('hotel')} addLabel="Hotel" isOpen={hotelsOpen} onToggle={() => setHotelsOpen((v) => !v)} />
       {hotelsOpen && <div className="space-y-2">
         {hotels.map((h) => {
           const hotelLogo = getLogoPath(h.name);
@@ -232,7 +188,7 @@ export function KeyBookings({
       </div>}
 
       {/* ── PARKING ── */}
-      <SectionHeader label="Parking" onAdd={() => setAddingParking(true)} addLabel="Parking" isOpen={parkingOpen} onToggle={() => setParkingOpen((v) => !v)} />
+      <SectionHeader label="Parking" onAdd={() => onAdd('parking')} addLabel="Parking" isOpen={parkingOpen} onToggle={() => setParkingOpen((v) => !v)} />
       {parkingOpen && <div className="space-y-2">
         {parking.map((p) => (
           <div
@@ -264,8 +220,8 @@ export function KeyBookings({
       </div>}
 
       {/* ── RENTAL CARS ── */}
-      {!!rentalCarNeeded && <SectionHeader label="Rental Car" onAdd={() => setAddingRentalCar(true)} addLabel="Rental Car" isOpen={rentalCarsOpen} onToggle={() => setRentalCarsOpen((v) => !v)} />}
-      {!!rentalCarNeeded && rentalCarsOpen && <div className="space-y-2">
+      {(!!rentalCarNeeded || rentalCars.length > 0) && <SectionHeader label="Rental Car" onAdd={() => onAdd('rentalCar')} addLabel="Rental Car" isOpen={rentalCarsOpen} onToggle={() => setRentalCarsOpen((v) => !v)} />}
+      {(!!rentalCarNeeded || rentalCars.length > 0) && rentalCarsOpen && <div className="space-y-2">
         {rentalCars.map((c) => {
           const carLogo = getLogoPath(c.company);
           return (
@@ -299,7 +255,7 @@ export function KeyBookings({
       </div>}
 
       {/* ── TRANSIT ── */}
-      <SectionHeader label="Transit" onAdd={() => setAddingTransit(true)} addLabel="Transit" isOpen={transitOpen} onToggle={() => setTransitOpen((v) => !v)} />
+      <SectionHeader label="Transit" onAdd={() => onAdd('transit')} addLabel="Transit" isOpen={transitOpen} onToggle={() => setTransitOpen((v) => !v)} />
       {transitOpen && <div className="space-y-2">
         {transit.map((t) => (
           <div
@@ -378,38 +334,6 @@ export function KeyBookings({
           <span className="text-xs text-stone-400 capitalize shrink-0">{status}</span>
         </div>
       ))}
-
-      {/* Forms (add only — editing happens via the booking detail drawer) */}
-      {addingFlight && (
-        <FlightForm tripId={tripId} flight={null}
-          onSaved={handleFlightSaved}
-          onDeleted={(id) => { onFlightsChange(flights.filter((x) => x.id !== id)); toast('Flight deleted'); }}
-          onClose={() => setAddingFlight(false)} />
-      )}
-      {addingHotel && (
-        <HotelForm tripId={tripId} hotel={null}
-          onSaved={handleHotelSaved}
-          onDeleted={(id) => { onHotelsChange(hotels.filter((x) => x.id !== id)); toast('Hotel deleted'); }}
-          onClose={() => setAddingHotel(false)} />
-      )}
-      {addingParking && (
-        <ParkingForm tripId={tripId} parking={null}
-          onSaved={handleParkingSaved}
-          onDeleted={(id) => { onParkingChange(parking.filter((x) => x.id !== id)); toast('Parking deleted'); }}
-          onClose={() => setAddingParking(false)} />
-      )}
-      {addingRentalCar && (
-        <RentalCarForm tripId={tripId} rentalCar={null}
-          onSaved={handleRentalCarSaved}
-          onDeleted={(id) => { onRentalCarsChange(rentalCars.filter((x) => x.id !== id)); toast('Rental car deleted'); }}
-          onClose={() => setAddingRentalCar(false)} />
-      )}
-      {addingTransit && (
-        <TransitForm tripId={tripId} transit={null}
-          onSaved={handleTransitSaved}
-          onDeleted={(id) => { onTransitChange(transit.filter((x) => x.id !== id)); toast('Transit deleted'); }}
-          onClose={() => setAddingTransit(false)} />
-      )}
     </div>
   );
 }
