@@ -6,8 +6,6 @@ import { BookingRef } from './booking-selection';
 import { EventCard } from './EventCard';
 import { BrandLogo } from './BrandLogo';
 import { Button } from '@/components/ui/button';
-import { getMapsUrl } from '@/lib/maps';
-import { MapPin } from 'lucide-react';
 import { fmt12, fmtWeekdayParts } from '@/lib/dates';
 
 interface DaySectionProps {
@@ -242,14 +240,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
                           {p.location}
                           {p.level && <span className="text-stone-400 font-normal ml-1.5 text-xs">{p.level}</span>}
                         </p>
-                        <div className="flex items-center gap-1">
-                          <p className="text-xs text-slate-600">{isDropoff ? 'Drop-off' : 'Pick-up'}</p>
-                          {p.address && (
-                            <a href={getMapsUrl(p.address)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                              <MapPin className="h-3.5 w-3.5 text-stone-400 hover:text-blue-500 transition-colors" />
-                            </a>
-                          )}
-                        </div>
+                        <p className="text-xs text-slate-600">{isDropoff ? 'Drop-off' : 'Pick-up'}</p>
                       </div>
                     </div>
                     {item.time && <span className="text-sm font-semibold text-stone-700 shrink-0">{fmt12(item.time)}</span>}
@@ -320,14 +311,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
                       <BrandLogo name={h.name} fallback="🏨" heightClass="h-4" />
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-stone-900 truncate">{h.name}</p>
-                        <div className="flex items-center gap-1">
-                          <p className="text-xs text-amber-700">{isIn ? 'Check-in' : 'Check-out'}</p>
-                          {h.address && (
-                            <a href={getMapsUrl(h.address)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                              <MapPin className="h-3.5 w-3.5 text-amber-400 hover:text-blue-500 transition-colors" />
-                            </a>
-                          )}
-                        </div>
+                        <p className="text-xs text-amber-700">{isIn ? 'Check-in' : 'Check-out'}</p>
                       </div>
                     </div>
                     {time && <span className="text-sm font-semibold text-stone-700 shrink-0">{fmt12(time)}</span>}

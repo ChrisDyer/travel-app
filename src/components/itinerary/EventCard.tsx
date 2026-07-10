@@ -3,7 +3,6 @@
 import { TripEvent } from '@/types/travel';
 import { BookingStatusBadge } from './BookingStatusBadge';
 import { BrandLogo } from './BrandLogo';
-import { getLogoPath } from '@/lib/logos';
 import { getMapsUrl } from '@/lib/maps';
 import { MapPin } from 'lucide-react';
 import { fmt12 } from '@/lib/dates';
@@ -67,29 +66,6 @@ export function EventCard({ event, onSelect, onMoveUp, onMoveDown }: EventCardPr
                     <MapPin className="h-3.5 w-3.5 text-stone-400 hover:text-blue-500 transition-colors" />
                   </a>
                 </div>
-              )}
-              {event.confirmationNumber && (
-                <p className="text-xs text-stone-400 mt-1">Conf: {event.confirmationNumber}</p>
-              )}
-              {(event.vendor || event.orderNumber) && (
-                <p className="text-xs text-stone-400 mt-0.5">
-                  {[
-                    // Hide vendor name when its logo is shown as the card icon
-                    !getLogoPath(event.vendor) ? event.vendor : null,
-                    event.orderNumber ? `#${event.orderNumber}` : null,
-                  ].filter(Boolean).join(' · ')}
-                </p>
-              )}
-              {event.seatInfo && (
-                <p className="text-xs text-stone-400 mt-0.5">Seats: {event.seatInfo}</p>
-              )}
-              {event.cancellationDeadline && (() => {
-                const deadline = new Date(event.cancellationDeadline + 'T00:00:00');
-                const label = deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                return <p className="text-xs mt-0.5 text-stone-400">Cancel by {label}</p>;
-              })()}
-              {event.notes && (
-                <p className="text-sm text-stone-500 mt-1 line-clamp-2">{event.notes}</p>
               )}
             </div>
           </div>

@@ -12,8 +12,7 @@ import { RentalCarForm } from './RentalCarForm';
 import { TransitForm } from './TransitForm';
 import { getLogoPath } from '@/lib/logos';
 import { BrandLogo } from './BrandLogo';
-import { getMapsUrl } from '@/lib/maps';
-import { ChevronDown, MapPin } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { fmt12, fmtShortDate } from '@/lib/dates';
 
@@ -40,15 +39,13 @@ const statusBorder: Record<BookingStatus, string> = {
   unbooked:  'border-stone-200 bg-stone-50',
 };
 
-function LegRow({ label, flightNum, date, depTime, arrTime, conf, seats }: {
+function LegRow({ label, flightNum, date, depTime, arrTime }: {
   label?: string; flightNum?: string | null; date?: string | null;
-  depTime?: string | null; arrTime?: string | null; conf?: string | null; seats?: string | null;
+  depTime?: string | null; arrTime?: string | null;
 }) {
   const parts = [
     fmtShortDate(date ?? null),
     depTime || arrTime ? [fmt12(depTime ?? null), fmt12(arrTime ?? null)].filter(Boolean).join(' → ') : null,
-    conf ? `Conf: ${conf}` : null,
-    seats ? `Seats: ${seats}` : null,
   ].filter(Boolean);
 
   return (
@@ -58,6 +55,17 @@ function LegRow({ label, flightNum, date, depTime, arrTime, conf, seats }: {
       <span className="text-xs text-stone-500">{parts.join(' · ')}</span>
     </div>
   );
+}
+
+function DateRangeLine({ startDate, endDate, startLabel, endLabel }: {
+  startDate?: string | null; endDate?: string | null; startLabel: string; endLabel: string;
+}) {
+  const start = fmtShortDate(startDate ?? null);
+  const end = fmtShortDate(endDate ?? null);
+  if (start && end) return <span className="text-xs text-stone-500">{start} – {end}</span>;
+  if (start) return <span className="text-xs text-stone-500">{startLabel}: {start}</span>;
+  if (end) return <span className="text-xs text-stone-500">{endLabel}: {end}</span>;
+  return null;
 }
 
 function SectionHeader({ label, onAdd, addLabel, isOpen, onToggle }: {
@@ -169,18 +177,18 @@ export function KeyBookings({
                     </div>
                     {f.tripType === 'round-trip' ? (
                       <>
-                        <LegRow label="Outbound" flightNum={f.flightNumber} date={f.departureDate} depTime={f.departureTime} arrTime={f.arrivalTime} conf={f.confirmationNumber} seats={f.seats} />
+                        <LegRow label="Outbound" flightNum={f.flightNumber} date={f.departureDate} depTime={f.departureTime} arrTime={f.arrivalTime} />
                         {(f.returnFlightNumber || f.returnDepartureDate) && (
-                          <LegRow label="Return" flightNum={f.returnFlightNumber} date={f.returnDepartureDate} depTime={f.returnDepartureTime} arrTime={f.returnArrivalTime} conf={f.returnConfirmationNumber} seats={f.returnSeats} />
+                          <LegRow label="Return" flightNum={f.returnFlightNumber} date={f.returnDepartureDate} depTime={f.returnDepartureTime} arrTime={f.returnArrivalTime} />
                         )}
                       </>
                     ) : (
-                      <LegRow flightNum={f.flightNumber} date={f.departureDate} depTime={f.departureTime} arrTime={f.arrivalTime} conf={f.confirmationNumber} seats={f.seats} />
+                      <LegRow flightNum={f.flightNumber} date={f.departureDate} depTime={f.departureTime} arrTime={f.arrivalTime} />
                     )}
-                    {f.cancellationPolicy && <p className="text-xs text-stone-400 mt-0.5">{f.cancellationPolicy}</p>}
                   </div>
                 </div>
                 <BookingStatusBadge status={f.bookingStatus as BookingStatus} />
+                <ChevronRight className="h-4 w-4 text-stone-300 shrink-0 self-center" />
               </div>
             </div>
           );
@@ -207,31 +215,15 @@ export function KeyBookings({
                   <div className="min-w-0">
                     {/* Always show the full property name — the logo only identifies the chain */}
                     <p className="text-sm font-semibold text-stone-900">{h.name}</p>
-                  {h.address && (
-                    <div className="flex items-center gap-1 min-w-0">
-                      <p className="text-xs text-stone-400 truncate">{h.address}</p>
-                      <a href={getMapsUrl(h.address)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="shrink-0">
-                        <MapPin className="h-3.5 w-3.5 text-stone-400 hover:text-blue-500 transition-colors" />
-                      </a>
+                    <div className="mt-1">
+                      <DateRangeLine startDate={h.checkInDate} endDate={h.checkOutDate} startLabel="Check-in" endLabel="Check-out" />
                     </div>
-                  )}
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                    {(h.checkInDate || h.checkInTime) && (
-                      <span className="text-xs text-stone-500">Check-in: {fmtShortDate(h.checkInDate)}{h.checkInTime ? ` @ ${fmt12(h.checkInTime)}` : ''}</span>
-                    )}
-                    {(h.checkOutDate || h.checkOutTime) && (
-                      <span className="text-xs text-stone-500">Check-out: {fmtShortDate(h.checkOutDate)}{h.checkOutTime ? ` @ ${fmt12(h.checkOutTime)}` : ''}</span>
-                    )}
-                    {h.roomType && <span className="text-xs text-stone-400">{h.roomType}</span>}
-                    {h.confirmationNumber && <span className="text-xs text-stone-400">Conf: {h.confirmationNumber}</span>}
-                    {h.amenities && <span className="text-xs text-stone-400">{h.amenities}</span>}
-                    {h.cancellationPolicy && <span className="text-xs text-stone-400">{h.cancellationPolicy}</span>}
                   </div>
                 </div>
+                <BookingStatusBadge status={h.bookingStatus as BookingStatus} />
+                <ChevronRight className="h-4 w-4 text-stone-300 shrink-0 self-center" />
               </div>
-              <BookingStatusBadge status={h.bookingStatus as BookingStatus} />
             </div>
-          </div>
           );
         })}
         {hotels.length === 0 && (
@@ -256,29 +248,13 @@ export function KeyBookings({
                     {p.location}
                     {p.level && <span className="font-normal text-stone-500 ml-2 text-xs">{p.level}</span>}
                   </p>
-                  {p.address && (
-                    <div className="flex items-center gap-1 min-w-0">
-                      <p className="text-xs text-stone-400 truncate">{p.address}</p>
-                      <a href={getMapsUrl(p.address)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="shrink-0">
-                        <MapPin className="h-3.5 w-3.5 text-stone-400 hover:text-blue-500 transition-colors" />
-                      </a>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                    {(p.startDate || (p.startTime && p.startTime !== '00:00')) && (
-                      <span className="text-xs text-stone-500">Drop-off: {fmtShortDate(p.startDate)}{p.startTime && p.startTime !== '00:00' ? ` @ ${fmt12(p.startTime)}` : ''}</span>
-                    )}
-                    {(p.endDate || (p.endTime && p.endTime !== '00:00')) && (
-                      <span className="text-xs text-stone-500">Pick-up: {fmtShortDate(p.endDate)}{p.endTime && p.endTime !== '00:00' ? ` @ ${fmt12(p.endTime)}` : ''}</span>
-                    )}
-                    {p.vendor && <span className="text-xs text-stone-400">{p.vendor}</span>}
-                    {p.confirmationNumber && <span className="text-xs text-stone-400">Conf: {p.confirmationNumber}</span>}
-                    {p.orderNumber && <span className="text-xs text-stone-400">Order: {p.orderNumber}</span>}
-                    {p.cost != null && <span className="text-xs text-stone-400">{p.currency ?? 'USD'} {Number(p.cost).toFixed(2)}</span>}
+                  <div className="mt-1">
+                    <DateRangeLine startDate={p.startDate} endDate={p.endDate} startLabel="Drop-off" endLabel="Pick-up" />
                   </div>
                 </div>
               </div>
               <BookingStatusBadge status={p.bookingStatus as BookingStatus} />
+              <ChevronRight className="h-4 w-4 text-stone-300 shrink-0 self-center" />
             </div>
           </div>
         ))}
@@ -306,21 +282,13 @@ export function KeyBookings({
                       {!carLogo && c.company}
                       {c.carClass && <span className="font-normal text-stone-500 ml-2 text-xs">{c.carClass}</span>}
                     </p>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                    {(c.pickupDate || c.pickupTime) && (
-                      <span className="text-xs text-stone-500">Pick-up: {fmtShortDate(c.pickupDate)}{c.pickupTime ? ` @ ${fmt12(c.pickupTime)}` : ''}</span>
-                    )}
-                    {c.pickupLocation && <span className="text-xs text-stone-400">{c.pickupLocation}</span>}
-                    {(c.dropoffDate || c.dropoffTime) && (
-                      <span className="text-xs text-stone-500">Drop-off: {fmtShortDate(c.dropoffDate)}{c.dropoffTime ? ` @ ${fmt12(c.dropoffTime)}` : ''}</span>
-                    )}
-                    {c.confirmationNumber && <span className="text-xs text-stone-400">Conf: {c.confirmationNumber}</span>}
-                    {c.driverName && <span className="text-xs text-stone-400">Driver: {c.driverName}</span>}
-                    {c.cost != null && <span className="text-xs text-stone-400">{c.currency ?? 'USD'} {Number(c.cost).toFixed(2)}</span>}
+                  <div className="mt-1">
+                    <DateRangeLine startDate={c.pickupDate} endDate={c.dropoffDate} startLabel="Pick-up" endLabel="Drop-off" />
                   </div>
                 </div>
               </div>
               <BookingStatusBadge status={c.bookingStatus as BookingStatus} />
+              <ChevronRight className="h-4 w-4 text-stone-300 shrink-0 self-center" />
             </div>
           </div>
           );
@@ -354,13 +322,11 @@ export function KeyBookings({
                     {(t.departureDate || t.departureTime) && (
                       <span className="text-xs text-stone-500">Dep: {fmtShortDate(t.departureDate)}{t.departureTime ? ` @ ${fmt12(t.departureTime)}` : ''}</span>
                     )}
-                    {t.confirmationNumber && <span className="text-xs text-stone-400">Conf: {t.confirmationNumber}</span>}
-                    {t.seatInfo && <span className="text-xs text-stone-400">{t.seatInfo}</span>}
-                    {t.cost != null && <span className="text-xs text-stone-400">{t.currency ?? 'USD'} {Number(t.cost).toFixed(2)}</span>}
                   </div>
                 </div>
               </div>
               <BookingStatusBadge status={t.bookingStatus as BookingStatus} />
+              <ChevronRight className="h-4 w-4 text-stone-300 shrink-0 self-center" />
             </div>
           </div>
         ))}
