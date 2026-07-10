@@ -20,7 +20,7 @@ export function TripHeaderActions({ trip }: TripHeaderActionsProps) {
 
   return (
     <>
-      <span className="text-xs text-stone-400">{tripTiming(trip.startDate, trip.endDate, localToday())}</span>
+      <span className="max-sm:hidden text-xs text-stone-400">{tripTiming(trip.startDate, trip.endDate, localToday())}</span>
 
       <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-stone-500 hover:text-stone-800">
         <Pencil className="h-4 w-4 mr-1" />

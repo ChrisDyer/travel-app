@@ -31,15 +31,15 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
 
   return (
     <div className="min-h-screen bg-stone-50">
-      <header className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between no-print">
-        <div className="flex items-center gap-4">
+      <header className="bg-white border-b border-stone-200 px-6 py-4 max-sm:px-4 max-sm:py-3 flex items-center justify-between no-print">
+        <div className="flex items-center gap-4 min-w-0">
           <a href="https://zo-bot.com" className="text-stone-400 hover:text-stone-700 transition-colors" title="zo-bot.com">
             <Home size={18} />
           </a>
           <Link href="/trips" className="text-stone-400 hover:text-stone-700 text-sm">← Trips</Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-serif font-bold text-stone-900">{trip.title}</h1>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <h1 className="min-w-0 text-xl font-serif font-bold text-stone-900 truncate">{trip.title}</h1>
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${statusColors[trip.status] ?? statusColors.planning}`}>
                 {statusLabel(trip.status)}
               </span>

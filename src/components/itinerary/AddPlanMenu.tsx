@@ -25,11 +25,11 @@ const items: { kind: BookingKind; label: string; icon: React.ElementType }[] = [
 
 export function AddPlanMenu({ onAdd }: AddPlanMenuProps) {
   return (
-    <div className="no-print">
+    <div className="max-lg:fixed max-lg:bottom-5 max-lg:right-5 max-lg:z-30 lg:static no-print">
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button>
+            <Button className="max-lg:rounded-full max-lg:shadow-lg max-lg:h-13 max-lg:px-4">
               <Plus className="h-4 w-4 mr-1" />
               Add a plan
             </Button>

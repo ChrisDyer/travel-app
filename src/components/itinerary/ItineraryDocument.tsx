@@ -19,6 +19,7 @@ import { PackingChecklist } from './PackingChecklist';
 import { TripCostSummary } from './TripCostSummary';
 import { TripAssistant } from '@/components/trips/TripAssistant';
 import { toast } from '@/components/ui/toast';
+import { cn } from '@/lib/utils';
 
 interface ItineraryDocumentProps {
   trip: Trip;
@@ -54,6 +55,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
   const [selectedDay, setSelectedDay] = useState<TripDay | null>(null);
   const [selection, setSelection] = useState<BookingRef | null>(null);
   const [adding, setAdding] = useState<BookingKind | null>(null);
+  const [mobileTab, setMobileTab] = useState<'itinerary' | 'bookings' | 'overview'>('itinerary');
 
   function handleAdd(kind: BookingKind) {
     if (kind === 'event') {
@@ -232,50 +234,78 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
         onTransitAdded={(newTransit) => setTransit((prev) => [...prev, ...newTransit])}
       />
 
+      <div className="lg:hidden no-print sticky top-0 z-20 -mx-4 px-4 py-2 bg-stone-50/95 backdrop-blur border-b border-stone-200 flex gap-1">
+        {(
+          [
+            { key: 'itinerary', label: 'Itinerary' },
+            { key: 'bookings', label: 'Bookings' },
+            { key: 'overview', label: 'Overview' },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setMobileTab(tab.key)}
+            className={cn(
+              'min-h-10 rounded-full text-xs font-medium px-3 py-1.5 transition-colors',
+              mobileTab === tab.key ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-500'
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-[640px_1fr] gap-8 items-start">
         {/* Left column: map + bookings + cancellations */}
         <div className="lg:sticky lg:top-8">
-          <TripMap
-            locations={mapLocations}
-            activeLocations={selectedDay ? getActiveMapLocations(selectedDay.date) : undefined}
-            selectedDate={selectedDay?.date}
-            onClear={() => setSelectedDay(null)}
-          />
+          <div className={cn(mobileTab !== 'overview' && 'max-lg:hidden', 'print:block')}>
+            <TripMap
+              locations={mapLocations}
+              activeLocations={selectedDay ? getActiveMapLocations(selectedDay.date) : undefined}
+              selectedDate={selectedDay?.date}
+              onClear={() => setSelectedDay(null)}
+            />
+          </div>
 
-          <KeyBookings
-            travelMode={trip.travelMode}
-            rentalCarNeeded={trip.rentalCarNeeded}
-            flights={flights}
-            hotels={hotels}
-            parking={parking}
-            rentalCars={rentalCars}
-            transit={transit}
-            onAdd={handleAdd}
-            onSelect={(ref) => setSelection(ref)}
-          />
+          <div className={cn(mobileTab !== 'bookings' && 'max-lg:hidden', 'print:block')}>
+            <KeyBookings
+              travelMode={trip.travelMode}
+              rentalCarNeeded={trip.rentalCarNeeded}
+              flights={flights}
+              hotels={hotels}
+              parking={parking}
+              rentalCars={rentalCars}
+              transit={transit}
+              onAdd={handleAdd}
+              onSelect={(ref) => setSelection(ref)}
+            />
+          </div>
 
-          <CancellationDeadlines
-            hotels={hotels}
-            events={events}
-            flights={flights}
-            rentalCars={rentalCars}
-            parking={parking}
-            transit={transit}
-          />
+          <div className={cn(mobileTab !== 'overview' && 'max-lg:hidden', 'print:block')}>
+            <CancellationDeadlines
+              hotels={hotels}
+              events={events}
+              flights={flights}
+              rentalCars={rentalCars}
+              parking={parking}
+              transit={transit}
+            />
 
-          <TripCostSummary
-            trip={trip}
-            events={events}
-            flights={flights}
-            hotels={hotels}
-            parking={parking}
-            rentalCars={rentalCars}
-            transit={transit}
-          />
+            <TripCostSummary
+              trip={trip}
+              events={events}
+              flights={flights}
+              hotels={hotels}
+              parking={parking}
+              rentalCars={rentalCars}
+              transit={transit}
+            />
+          </div>
         </div>
 
         {/* Right column: daily itinerary */}
-        <div className="space-y-12">
+        <div className={cn(mobileTab !== 'itinerary' && 'max-lg:hidden', 'print:block', 'space-y-12 max-lg:pb-24')}>
           <div className="flex justify-end">
             <AddPlanMenu onAdd={handleAdd} />
           </div>

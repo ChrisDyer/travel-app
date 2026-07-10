@@ -78,13 +78,13 @@ export function EventCard({ event, onSelect, onMoveUp, onMoveDown }: EventCardPr
             </div>
           </div>
           {(onMoveUp || onMoveDown) && (
-            <div className="no-print flex flex-col opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            <div className="no-print flex flex-col lg:opacity-0 lg:group-hover:opacity-100 max-lg:opacity-100 transition-opacity shrink-0">
               <button aria-label="Move up" disabled={!onMoveUp}
                 onClick={(e) => { e.stopPropagation(); onMoveUp?.(); }}
-                className="text-stone-300 hover:text-stone-600 disabled:opacity-30 leading-none text-xs px-1">▲</button>
+                className="text-stone-300 hover:text-stone-600 disabled:opacity-30 leading-none text-xs px-1 max-lg:p-2 max-lg:text-sm">▲</button>
               <button aria-label="Move down" disabled={!onMoveDown}
                 onClick={(e) => { e.stopPropagation(); onMoveDown?.(); }}
-                className="text-stone-300 hover:text-stone-600 disabled:opacity-30 leading-none text-xs px-1">▼</button>
+                className="text-stone-300 hover:text-stone-600 disabled:opacity-30 leading-none text-xs px-1 max-lg:p-2 max-lg:text-sm">▼</button>
             </div>
           )}
         </div>
