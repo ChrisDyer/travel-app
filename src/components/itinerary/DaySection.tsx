@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
+import { BookingRef } from './booking-selection';
 import { EventCard } from './EventCard';
 import { BrandLogo } from './BrandLogo';
 import { Button } from '@/components/ui/button';
@@ -22,12 +23,7 @@ interface DaySectionProps {
   onDayTitleChanged?: (dayId: string, title: string | null) => void;
   onDayNotesChanged?: (dayId: string, notes: string | null) => void;
   onAddEvent: (day: TripDay) => void;
-  onEditEvent: (event: TripEvent) => void;
-  onEditFlight: (flight: TripFlight) => void;
-  onEditHotel: (hotel: TripHotel) => void;
-  onEditParking: (parking: TripParking) => void;
-  onEditRentalCar: (rentalCar: TripRentalCar) => void;
-  onEditTransit: (transit: TripTransit) => void;
+  onSelectItem: (ref: BookingRef) => void;
   onReorderEvent?: (eventId: string, direction: 'up' | 'down') => void;
 }
 
@@ -43,7 +39,7 @@ type TimelineItem =
   | { kind: 'rentalCar'; time: string | null; rentalCar: TripRentalCar; role: 'pickup' | 'dropoff' }
   | { kind: 'transit'; time: string | null; transit: TripTransit };
 
-export function DaySection({ day, events, dayFlights, dayHotels, dayParking, dayRentalCars, dayTransit, isSelected, onSelectDay, onDayTitleChanged, onDayNotesChanged, onAddEvent, onEditEvent, onEditFlight, onEditHotel, onEditParking, onEditRentalCar, onEditTransit, onReorderEvent }: DaySectionProps) {
+export function DaySection({ day, events, dayFlights, dayHotels, dayParking, dayRentalCars, dayTransit, isSelected, onSelectDay, onDayTitleChanged, onDayNotesChanged, onAddEvent, onSelectItem, onReorderEvent }: DaySectionProps) {
   const { weekday, date } = fmtWeekdayParts(day.date);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(day.title ?? '');
@@ -191,7 +187,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
               <EventCard
                 key={item.event.id}
                 event={item.event}
-                onEdit={onEditEvent}
+                onSelect={(e) => onSelectItem({ kind: 'event', id: e.id })}
                 onMoveUp={pos > 0 ? () => onReorderEvent?.(item.event.id, 'up') : undefined}
                 onMoveDown={pos !== -1 && pos < untimedIds.length - 1 ? () => onReorderEvent?.(item.event.id, 'down') : undefined}
               />
@@ -210,7 +206,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
               ? `${isReturn ? f.arrivalAirport : f.departureAirport} → ${isReturn ? f.departureAirport : f.arrivalAirport}`
               : `${f.departureAirport} → ${f.arrivalAirport}`;
             return (
-              <div key={`flight-${f.id}-${role}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onEditFlight(f)}>
+              <div key={`flight-${f.id}-${role}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onSelectItem({ kind: 'flight', id: f.id })}>
                 <div className="absolute left-0 top-3 w-3 h-3 rounded-full bg-white border-2 border-blue-300 group-hover:border-blue-500 transition-colors" />
                 <div className="bg-blue-50 rounded-lg border border-blue-200 p-3 hover:border-blue-300 hover:shadow-sm transition-all">
                   <div className="flex items-center justify-between gap-2">
@@ -235,7 +231,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
             const p = item.parking;
             const isDropoff = item.role === 'dropoff';
             return (
-              <div key={`parking-${p.id}-${item.role}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onEditParking(p)}>
+              <div key={`parking-${p.id}-${item.role}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onSelectItem({ kind: 'parking', id: p.id })}>
                 <div className="absolute left-0 top-3 w-3 h-3 rounded-full bg-white border-2 border-slate-300 group-hover:border-slate-500 transition-colors" />
                 <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 hover:border-slate-300 hover:shadow-sm transition-all">
                   <div className="flex items-center justify-between gap-2">
@@ -267,7 +263,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
             const c = item.rentalCar;
             const isPickup = item.role === 'pickup';
             return (
-              <div key={`rentalcar-${c.id}-${item.role}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onEditRentalCar(c)}>
+              <div key={`rentalcar-${c.id}-${item.role}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onSelectItem({ kind: 'rentalCar', id: c.id })}>
                 <div className="absolute left-0 top-3 w-3 h-3 rounded-full bg-white border-2 border-slate-300 group-hover:border-slate-500 transition-colors" />
                 <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 hover:border-slate-300 hover:shadow-sm transition-all">
                   <div className="flex items-center justify-between gap-2">
@@ -288,7 +284,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
           if (item.kind === 'transit') {
             const t = item.transit;
             return (
-              <div key={`transit-${t.id}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onEditTransit(t)}>
+              <div key={`transit-${t.id}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onSelectItem({ kind: 'transit', id: t.id })}>
                 <div className="absolute left-0 top-3 w-3 h-3 rounded-full bg-white border-2 border-slate-300 group-hover:border-slate-500 transition-colors" />
                 <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 hover:border-slate-300 hover:shadow-sm transition-all">
                   <div className="flex items-center justify-between gap-2">
@@ -316,7 +312,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
             const isIn = item.role === 'checkin';
             const time = isIn ? h.checkInTime : h.checkOutTime;
             return (
-              <div key={`hotel-${h.id}-${item.role}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onEditHotel(h)}>
+              <div key={`hotel-${h.id}-${item.role}-${i}`} className="relative pl-8 group cursor-pointer" onClick={() => onSelectItem({ kind: 'hotel', id: h.id })}>
                 <div className="absolute left-0 top-3 w-3 h-3 rounded-full bg-white border-2 border-amber-300 group-hover:border-amber-500 transition-colors" />
                 <div className="bg-amber-50 rounded-lg border border-amber-200 p-3 hover:border-amber-300 hover:shadow-sm transition-all">
                   <div className="flex items-center justify-between gap-2">

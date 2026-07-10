@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, PackingItem } from '@/types/travel';
+import { BookingRef } from './booking-selection';
+import { BookingDetailSheet } from './BookingDetailSheet';
 import { DaySection } from './DaySection';
 import { EventForm } from './EventForm';
 import { KeyBookings } from './KeyBookings';
@@ -29,6 +31,10 @@ interface ItineraryDocumentProps {
   initialPackingItems: PackingItem[];
 }
 
+const kindLabel: Record<BookingRef['kind'], string> = {
+  flight: 'Flight', hotel: 'Hotel', parking: 'Parking', rentalCar: 'Rental car', transit: 'Transit', event: 'Event',
+};
+
 export function ItineraryDocument({ trip, initialDays, initialEvents, initialFlights, initialHotels, initialParking, initialRentalCars, initialTransit, initialPackingItems }: ItineraryDocumentProps) {
   const [days, setDays] = useState<TripDay[]>(initialDays);
   const [events, setEvents] = useState<TripEvent[]>(initialEvents);
@@ -45,6 +51,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
   const [editingRentalCar, setEditingRentalCar] = useState<TripRentalCar | null>(null);
   const [editingTransit, setEditingTransit] = useState<TripTransit | null>(null);
   const [selectedDay, setSelectedDay] = useState<TripDay | null>(null);
+  const [selection, setSelection] = useState<BookingRef | null>(null);
 
   function handleDayTitleChanged(dayId: string, title: string | null) {
     setDays((prev) => prev.map((d) => d.id === dayId ? { ...d, title } : d));
@@ -239,6 +246,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
             onParkingChange={setParking}
             onRentalCarsChange={setRentalCars}
             onTransitChange={setTransit}
+            onSelect={(ref) => setSelection(ref)}
           />
 
           <CancellationDeadlines
@@ -285,12 +293,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
               isSelected={selectedDay?.id === day.id}
               onSelectDay={(d) => setSelectedDay((prev) => prev?.id === d.id ? null : d)}
               onAddEvent={setAddingToDay}
-              onEditEvent={setEditingEvent}
-              onEditFlight={(f) => setEditingFlight(f)}
-              onEditHotel={(h) => setEditingHotel(h)}
-              onEditParking={(p) => setEditingParking(p)}
-              onEditRentalCar={(c) => setEditingRentalCar(c)}
-              onEditTransit={(t) => setEditingTransit(t)}
+              onSelectItem={(ref) => setSelection(ref)}
               onDayTitleChanged={handleDayTitleChanged}
               onDayNotesChanged={handleDayNotesChanged}
               onReorderEvent={(eventId, dir) => reorderEvent(day.id, eventId, dir)}
@@ -380,6 +383,41 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           onClose={() => setEditingTransit(null)}
         />
       )}
+
+      <BookingDetailSheet
+        tripId={trip.id}
+        selection={selection}
+        flights={flights}
+        hotels={hotels}
+        parking={parking}
+        rentalCars={rentalCars}
+        transit={transit}
+        events={events}
+        days={days}
+        onClose={() => setSelection(null)}
+        onEdit={(ref) => {
+          // Fallback from the documented "keep the drawer open" approach: nested
+          // Dialog-over-Sheet let Esc close both layers at once instead of just the
+          // form, so the drawer closes first and the form opens standalone.
+          setSelection(null);
+          if (ref.kind === 'flight') setEditingFlight(flights.find((f) => f.id === ref.id) ?? null);
+          else if (ref.kind === 'hotel') setEditingHotel(hotels.find((h) => h.id === ref.id) ?? null);
+          else if (ref.kind === 'parking') setEditingParking(parking.find((p) => p.id === ref.id) ?? null);
+          else if (ref.kind === 'rentalCar') setEditingRentalCar(rentalCars.find((c) => c.id === ref.id) ?? null);
+          else if (ref.kind === 'transit') setEditingTransit(transit.find((t) => t.id === ref.id) ?? null);
+          else if (ref.kind === 'event') setEditingEvent(events.find((e) => e.id === ref.id) ?? null);
+        }}
+        onDeleted={(ref) => {
+          if (ref.kind === 'flight') setFlights((prev) => prev.filter((f) => f.id !== ref.id));
+          else if (ref.kind === 'hotel') setHotels((prev) => prev.filter((h) => h.id !== ref.id));
+          else if (ref.kind === 'parking') setParking((prev) => prev.filter((p) => p.id !== ref.id));
+          else if (ref.kind === 'rentalCar') setRentalCars((prev) => prev.filter((c) => c.id !== ref.id));
+          else if (ref.kind === 'transit') setTransit((prev) => prev.filter((t) => t.id !== ref.id));
+          else if (ref.kind === 'event') setEvents((prev) => prev.filter((e) => e.id !== ref.id));
+          setSelection(null);
+          toast(`${kindLabel[ref.kind]} deleted`);
+        }}
+      />
     </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, BookingStatus, TripStatus } from '@/types/travel';
+import { BookingRef } from './booking-selection';
 import { Button } from '@/components/ui/button';
 import { BookingStatusBadge } from './BookingStatusBadge';
 import { FlightForm } from './FlightForm';
@@ -30,6 +31,7 @@ interface KeyBookingsProps {
   onParkingChange: (parking: TripParking[]) => void;
   onRentalCarsChange: (rentalCars: TripRentalCar[]) => void;
   onTransitChange: (transit: TripTransit[]) => void;
+  onSelect: (ref: BookingRef) => void;
 }
 
 const statusBorder: Record<BookingStatus, string> = {
@@ -90,16 +92,12 @@ export function KeyBookings({
   travelMode, rentalCarNeeded,
   flights, hotels, parking, rentalCars, transit,
   onFlightsChange, onHotelsChange, onParkingChange, onRentalCarsChange, onTransitChange,
+  onSelect,
 }: KeyBookingsProps) {
-  const [editingFlight, setEditingFlight] = useState<TripFlight | null>(null);
   const [addingFlight, setAddingFlight] = useState(false);
-  const [editingHotel, setEditingHotel] = useState<TripHotel | null>(null);
   const [addingHotel, setAddingHotel] = useState(false);
-  const [editingParking, setEditingParking] = useState<TripParking | null>(null);
   const [addingParking, setAddingParking] = useState(false);
-  const [editingRentalCar, setEditingRentalCar] = useState<TripRentalCar | null>(null);
   const [addingRentalCar, setAddingRentalCar] = useState(false);
-  const [editingTransit, setEditingTransit] = useState<TripTransit | null>(null);
   const [addingTransit, setAddingTransit] = useState(false);
 
   const [flightsOpen, setFlightsOpen] = useState(flights.length > 0);
@@ -110,27 +108,27 @@ export function KeyBookings({
 
   function handleFlightSaved(f: TripFlight, isNew: boolean) {
     onFlightsChange(isNew ? [...flights, f] : flights.map((x) => x.id === f.id ? f : x));
-    setEditingFlight(null); setAddingFlight(false);
+    setAddingFlight(false);
     toast('Flight saved');
   }
   function handleHotelSaved(h: TripHotel, isNew: boolean) {
     onHotelsChange(isNew ? [...hotels, h] : hotels.map((x) => x.id === h.id ? h : x));
-    setEditingHotel(null); setAddingHotel(false);
+    setAddingHotel(false);
     toast('Hotel saved');
   }
   function handleParkingSaved(p: TripParking, isNew: boolean) {
     onParkingChange(isNew ? [...parking, p] : parking.map((x) => x.id === p.id ? p : x));
-    setEditingParking(null); setAddingParking(false);
+    setAddingParking(false);
     toast('Parking saved');
   }
   function handleRentalCarSaved(c: TripRentalCar, isNew: boolean) {
     onRentalCarsChange(isNew ? [...rentalCars, c] : rentalCars.map((x) => x.id === c.id ? c : x));
-    setEditingRentalCar(null); setAddingRentalCar(false);
+    setAddingRentalCar(false);
     toast('Rental car saved');
   }
   function handleTransitSaved(t: TripTransit, isNew: boolean) {
     onTransitChange(isNew ? [...transit, t] : transit.map((x) => x.id === t.id ? t : x));
-    setEditingTransit(null); setAddingTransit(false);
+    setAddingTransit(false);
     toast('Transit saved');
   }
 
@@ -147,7 +145,7 @@ export function KeyBookings({
             <div
               key={f.id}
               className={`rounded-lg border p-3.5 cursor-pointer hover:shadow-sm transition-all no-print ${statusBorder[f.bookingStatus as BookingStatus]}`}
-              onClick={() => setEditingFlight(f)}
+              onClick={() => onSelect({ kind: 'flight', id: f.id })}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-3 min-w-0">
@@ -201,7 +199,7 @@ export function KeyBookings({
             <div
               key={h.id}
               className={`rounded-lg border p-3.5 cursor-pointer hover:shadow-sm transition-all no-print ${statusBorder[h.bookingStatus as BookingStatus]}`}
-              onClick={() => setEditingHotel(h)}
+              onClick={() => onSelect({ kind: 'hotel', id: h.id })}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-3 min-w-0">
@@ -248,7 +246,7 @@ export function KeyBookings({
           <div
             key={p.id}
             className={`rounded-lg border p-3.5 cursor-pointer hover:shadow-sm transition-all no-print ${statusBorder[p.bookingStatus as BookingStatus]}`}
-            onClick={() => setEditingParking(p)}
+            onClick={() => onSelect({ kind: 'parking', id: p.id })}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-start gap-2 min-w-0">
@@ -298,7 +296,7 @@ export function KeyBookings({
             <div
               key={c.id}
               className={`rounded-lg border p-3.5 cursor-pointer hover:shadow-sm transition-all no-print ${statusBorder[c.bookingStatus as BookingStatus]}`}
-              onClick={() => setEditingRentalCar(c)}
+              onClick={() => onSelect({ kind: 'rentalCar', id: c.id })}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-3 min-w-0">
@@ -339,7 +337,7 @@ export function KeyBookings({
           <div
             key={t.id}
             className={`rounded-lg border p-3.5 cursor-pointer hover:shadow-sm transition-all no-print ${statusBorder[t.bookingStatus as BookingStatus]}`}
-            onClick={() => setEditingTransit(t)}
+            onClick={() => onSelect({ kind: 'transit', id: t.id })}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-start gap-2 min-w-0">
@@ -415,36 +413,36 @@ export function KeyBookings({
         </div>
       ))}
 
-      {/* Forms */}
-      {(editingFlight || addingFlight) && (
-        <FlightForm tripId={tripId} flight={editingFlight}
+      {/* Forms (add only — editing happens via the booking detail drawer) */}
+      {addingFlight && (
+        <FlightForm tripId={tripId} flight={null}
           onSaved={handleFlightSaved}
-          onDeleted={(id) => { onFlightsChange(flights.filter((x) => x.id !== id)); setEditingFlight(null); toast('Flight deleted'); }}
-          onClose={() => { setEditingFlight(null); setAddingFlight(false); }} />
+          onDeleted={(id) => { onFlightsChange(flights.filter((x) => x.id !== id)); toast('Flight deleted'); }}
+          onClose={() => setAddingFlight(false)} />
       )}
-      {(editingHotel || addingHotel) && (
-        <HotelForm tripId={tripId} hotel={editingHotel}
+      {addingHotel && (
+        <HotelForm tripId={tripId} hotel={null}
           onSaved={handleHotelSaved}
-          onDeleted={(id) => { onHotelsChange(hotels.filter((x) => x.id !== id)); setEditingHotel(null); toast('Hotel deleted'); }}
-          onClose={() => { setEditingHotel(null); setAddingHotel(false); }} />
+          onDeleted={(id) => { onHotelsChange(hotels.filter((x) => x.id !== id)); toast('Hotel deleted'); }}
+          onClose={() => setAddingHotel(false)} />
       )}
-      {(editingParking || addingParking) && (
-        <ParkingForm tripId={tripId} parking={editingParking}
+      {addingParking && (
+        <ParkingForm tripId={tripId} parking={null}
           onSaved={handleParkingSaved}
-          onDeleted={(id) => { onParkingChange(parking.filter((x) => x.id !== id)); setEditingParking(null); toast('Parking deleted'); }}
-          onClose={() => { setEditingParking(null); setAddingParking(false); }} />
+          onDeleted={(id) => { onParkingChange(parking.filter((x) => x.id !== id)); toast('Parking deleted'); }}
+          onClose={() => setAddingParking(false)} />
       )}
-      {(editingRentalCar || addingRentalCar) && (
-        <RentalCarForm tripId={tripId} rentalCar={editingRentalCar}
+      {addingRentalCar && (
+        <RentalCarForm tripId={tripId} rentalCar={null}
           onSaved={handleRentalCarSaved}
-          onDeleted={(id) => { onRentalCarsChange(rentalCars.filter((x) => x.id !== id)); setEditingRentalCar(null); toast('Rental car deleted'); }}
-          onClose={() => { setEditingRentalCar(null); setAddingRentalCar(false); }} />
+          onDeleted={(id) => { onRentalCarsChange(rentalCars.filter((x) => x.id !== id)); toast('Rental car deleted'); }}
+          onClose={() => setAddingRentalCar(false)} />
       )}
-      {(editingTransit || addingTransit) && (
-        <TransitForm tripId={tripId} transit={editingTransit}
+      {addingTransit && (
+        <TransitForm tripId={tripId} transit={null}
           onSaved={handleTransitSaved}
-          onDeleted={(id) => { onTransitChange(transit.filter((x) => x.id !== id)); setEditingTransit(null); toast('Transit deleted'); }}
-          onClose={() => { setEditingTransit(null); setAddingTransit(false); }} />
+          onDeleted={(id) => { onTransitChange(transit.filter((x) => x.id !== id)); toast('Transit deleted'); }}
+          onClose={() => setAddingTransit(false)} />
       )}
     </div>
   );

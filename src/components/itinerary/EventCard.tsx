@@ -20,7 +20,7 @@ const categoryIcons: Record<string, string> = {
 
 interface EventCardProps {
   event: TripEvent;
-  onEdit: (event: TripEvent) => void;
+  onSelect: (event: TripEvent) => void;
   onMoveUp?: () => void;    // provided only when the card can move up
   onMoveDown?: () => void;  // provided only when the card can move down
 }
@@ -34,11 +34,11 @@ function logoName(title: string): string {
   return title;
 }
 
-export function EventCard({ event, onEdit, onMoveUp, onMoveDown }: EventCardProps) {
+export function EventCard({ event, onSelect, onMoveUp, onMoveDown }: EventCardProps) {
   return (
     <div
       className="relative pl-8 group cursor-pointer"
-      onClick={() => onEdit(event)}
+      onClick={() => onSelect(event)}
     >
       {/* Timeline dot */}
       <div className="absolute left-0 top-3 w-3 h-3 rounded-full bg-white border-2 border-stone-300 group-hover:border-stone-500 transition-colors" />
