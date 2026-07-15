@@ -78,8 +78,9 @@ export default function NewTripPage() {
 
   return (
     <div className="min-h-screen bg-stone-50">
-      <header className="bg-white border-b border-stone-200 px-6 py-4 flex items-center gap-4">
-        <a href="https://zo-bot.com" className="text-stone-400 hover:text-stone-700 transition-colors" title="zo-bot.com">
+      <header className="bg-white border-b border-stone-200 px-6 py-4 pt-[max(1rem,env(safe-area-inset-top))] flex items-center gap-4">
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- leaves the Next app for the homepage launcher; must be a real navigation, not client-side routing */}
+        <a href="/" className="hidden [@media(display-mode:standalone)]:block text-stone-400 hover:text-stone-700 transition-colors" title="Zo-Bot Home">
           <Home size={18} />
         </a>
         <Link href="/trips" className="text-stone-400 hover:text-stone-700 text-sm">← Back</Link>
