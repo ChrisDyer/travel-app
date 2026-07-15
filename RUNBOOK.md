@@ -100,6 +100,17 @@ DB_PATH=/home/chris/travel-app/local.db
 
 See `README.md` for how to obtain each value.
 
+> **`NEXT_PUBLIC_APP_URL` stays the legacy `travel.zo-bot.com` origin** — do not change
+> this to `zo-bot.com`. The app is served at `zo-bot.com/travel` (see the nginx section
+> below), but this value is only used to build the Gmail OAuth `redirect_uri` (which
+> must keep matching what's registered in Google Cloud Console) and the post-auth
+> redirect. The `travel.zo-bot.com` vhost is now redirect-only, so that post-auth
+> redirect bounces once through it — which is exactly what re-adds the `/travel`
+> prefix. `next.config.ts`'s `basePath: '/travel'` cannot reliably reconstruct
+> `zo-bot.com` from the request itself (confirmed: behind nginx, Next's `request.url`
+> resolves to the internal bind address, not the `Host` header), so don't "simplify"
+> this by pointing `NEXT_PUBLIC_APP_URL` at the new origin.
+
 > **`DB_PATH`** — Next.js standalone calls `process.chdir(__dirname)` at startup,
 > changing the working directory to `.next/standalone/`. Without `DB_PATH`, the app
 > creates `local.db` inside `.next/standalone/`, which is wiped on every build.
@@ -137,11 +148,35 @@ If setting up on a fresh server, create one via Cloudflare dashboard → your do
 
 ### 10. nginx config
 
+The app is served at `zo-bot.com/travel`, not its own subdomain. Two vhost files are
+involved:
+
+| File | Role |
+|---|---|
+| `/etc/nginx/sites-available/homepage` | Apex vhost (`zo-bot.com`). Owns `location /travel` — a prefix-**kept** proxy to `localhost:3001` (travel-app's own `next.config.ts` has `basePath: '/travel'`, so it expects to see the prefix itself, unlike finance's prefix-stripping proxy). |
+| `/etc/nginx/sites-available/travel` | Old `travel.zo-bot.com` vhost. Now **redirect-only**: `return 301 https://zo-bot.com/travel$request_uri;`. Kept (not deleted) so rollback is a one-line edit back to a proxy, and because the Gmail OAuth flow's post-auth redirect deliberately bounces through it (see the env-var note above). |
+
 ```bash
 apt install -y nginx
 ```
 
-Create `/etc/nginx/sites-available/travel`:
+`location /travel` in `/etc/nginx/sites-available/homepage`:
+
+```nginx
+location /travel {
+    proxy_pass http://localhost:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
+}
+```
+
+`/etc/nginx/sites-available/travel` (redirect-only):
 
 ```nginx
 server {
@@ -157,16 +192,7 @@ server {
     ssl_certificate     /etc/ssl/cloudflare.pem;
     ssl_certificate_key /etc/ssl/cloudflare.key;
 
-    location / {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_cache_bypass $http_upgrade;
-    }
+    return 301 https://zo-bot.com/travel$request_uri;
 }
 ```
 
@@ -184,22 +210,21 @@ pm2 save
 
 ### 12. Cloudflare Zero Trust (Access)
 
-Gates the entire site behind Google SSO.
-
-1. [Cloudflare Zero Trust](https://one.dash.cloudflare.com) → **Access** → **Applications** → **Add an application** → **Self-hosted**
-2. App name: Travel App, App domain: `travel.zo-bot.com`
-3. Policy: **Allow**, rule type: **Emails**, value: `chrissdyer@gmail.com`
-
-In Cloudflare DNS, set an A record for `travel` pointing to the VPS IP, **Proxied**.
+The app is now covered by the existing wildcard `*.zo-bot.com` Access policy set up for
+the apex (see root `README.md`) — no separate "Travel App" Access application is needed.
+The `travel` DNS A record (Proxied) can stay; it only carries the redirect-only vhost now.
 
 ### 13. Google OAuth redirect URI
 
+Unchanged from the original subdomain setup — do not add a new one:
+
 1. Google Cloud Console → **APIs & Services** → **Credentials** → your OAuth 2.0 client
-2. Add to **Authorized redirect URIs**: `https://travel.zo-bot.com/api/gmail/callback`
+2. **Authorized redirect URIs** should already contain: `https://travel.zo-bot.com/api/gmail/callback`
 
 ### 14. Verify
 
-- Open `https://travel.zo-bot.com` — Cloudflare Access login appears
+- Open `https://zo-bot.com/travel` — Cloudflare Access login appears
+- Open `https://travel.zo-bot.com` — 301s to `https://zo-bot.com/travel` (deep links preserved)
 - Sign in → trips page loads
 - Create a trip, add a cover photo — photo appears
 - Open Trip Assistant → AI responds
@@ -373,3 +398,18 @@ In development (`npm run dev`), no Cloudflare header is present and auth returns
 `'local'` via the fallback. In production, the same `'local'` value is returned
 unconditionally. There is no behavioural difference — this is intentional for a
 single-user app.
+
+### basePath (`/travel`)
+
+`next.config.ts` sets `basePath: '/travel'` and also exposes it as
+`NEXT_PUBLIC_BASE_PATH` (via `env:`) so client code can prefix things Next doesn't
+auto-prefix. Next only auto-prefixes `next/link`, `next/navigation`'s router, and
+`next/image` (this app doesn't use `next/image`) — raw `fetch()` calls, hand-written
+`<a>`/`<img>` hrefs, and public-folder asset references all need manual prefixing via
+`apiUrl()` in `src/lib/api.ts`. `src/proxy.ts`'s matcher config does **not** need the
+`/travel` prefix — it's matched against the basePath-stripped path automatically
+(confirmed empirically; the bundled Next 16 docs don't state this explicitly for
+Proxy specifically, only for `rewrites`/`redirects`). This applies even to
+same-VPS localhost calls: `homepage` and `mcp-server` both call this app directly
+over `http://localhost:3001`, and both now include `/travel` in that base URL,
+because Next's own router — not just nginx — requires the prefix.

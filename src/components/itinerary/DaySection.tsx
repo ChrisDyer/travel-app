@@ -7,6 +7,7 @@ import { EventCard } from './EventCard';
 import { BrandLogo } from './BrandLogo';
 import { Button } from '@/components/ui/button';
 import { fmt12, fmtWeekdayParts } from '@/lib/dates';
+import { apiUrl } from '@/lib/api';
 
 interface DaySectionProps {
   day: TripDay;
@@ -50,7 +51,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
     const newTitle = titleDraft.trim() || null;
     if (newTitle === (day.title ?? null)) return;
     try {
-      const res = await fetch(`/api/trips/${day.tripId}/days/${day.id}`, {
+      const res = await fetch(apiUrl(`/api/trips/${day.tripId}/days/${day.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newTitle }),
@@ -68,7 +69,7 @@ export function DaySection({ day, events, dayFlights, dayHotels, dayParking, day
     const newNotes = notesDraft.trim() || null;
     if (newNotes === (day.notes ?? null)) return;
     try {
-      const res = await fetch(`/api/trips/${day.tripId}/days/${day.id}`, {
+      const res = await fetch(apiUrl(`/api/trips/${day.tripId}/days/${day.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: newNotes }),

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toast";
+import { apiUrl } from "@/lib/api";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -26,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} h-full antialiased`}>
       <head>
-        <link rel="stylesheet" href="/print.css" />
+        <link rel="stylesheet" href={apiUrl("/print.css")} />
       </head>
       <body className="min-h-full flex flex-col font-sans">
         {children}

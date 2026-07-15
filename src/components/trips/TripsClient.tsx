@@ -20,6 +20,7 @@ import { Pencil, Copy, Trash2, MoreHorizontal } from 'lucide-react';
 import { statusColors, statusLabel, tripTiming, localToday } from '@/lib/trip-status';
 import { toast } from '@/components/ui/toast';
 import { formatDateRange } from '@/lib/dates';
+import { apiUrl } from '@/lib/api';
 
 type SortKey = 'startDate-desc' | 'startDate-asc' | 'created-desc';
 
@@ -88,7 +89,7 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
     if (duplicating) return;
     setDuplicating(trip.id);
     try {
-      const res = await fetch(`/api/trips/${trip.id}/duplicate`, { method: 'POST' });
+      const res = await fetch(apiUrl(`/api/trips/${trip.id}/duplicate`), { method: 'POST' });
       if (!res.ok) throw new Error();
       const copy = await res.json() as Trip;
       toast('Trip duplicated');
@@ -103,7 +104,7 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
   async function handleDelete(trip: Trip) {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/trips/${trip.id}`), { method: 'DELETE' });
       if (!res.ok) throw new Error();
       setTripList((prev) => prev.filter((t) => t.id !== trip.id));
       setConfirmDelete(null);
@@ -197,7 +198,7 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
               <Link href={`/trips/${trip.id}`} className="block">
                 <div className="h-36 w-full relative">
                   {trip.coverImageUrl ? (
-                    <img src={trip.coverImageUrl} alt={trip.title} className="h-full w-full object-cover" />
+                    <img src={apiUrl(trip.coverImageUrl)} alt={trip.title} className="h-full w-full object-cover" />
                   ) : (
                     <div className="h-full w-full bg-gradient-to-br from-stone-200 to-stone-300 flex items-center justify-center">
                       <span className="font-serif text-4xl text-stone-400">{trip.destination.charAt(0).toUpperCase()}</span>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Trip, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
+import { apiUrl } from '@/lib/api';
 
 interface TripCostSummaryProps {
   trip?: Trip;
@@ -48,7 +49,7 @@ export function TripCostSummary({ trip, events, flights, hotels, parking, rental
   useEffect(() => {
     if (!needsConversion && trip?.budget == null) return; // nothing to convert
     let active = true;
-    fetch(`/api/rates?base=${homeCurrency}`)
+    fetch(apiUrl(`/api/rates?base=${homeCurrency}`))
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (active && d?.rates) setRates(d.rates); })
       .catch(() => {});

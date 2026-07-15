@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { CoverImageUpload } from './CoverImageUpload';
 import { statusLabel } from '@/lib/trip-status';
+import { apiUrl } from '@/lib/api';
 
 const statuses: TripStatus[] = ['planning', 'confirmed', 'in-progress', 'completed'];
 const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -71,7 +72,7 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
       digestDayOfWeek: Number(form.get('digestDayOfWeek') ?? trip.digestDayOfWeek ?? 1),
     };
     try {
-      const res = await fetch(`/api/trips/${trip.id}`, {
+      const res = await fetch(apiUrl(`/api/trips/${trip.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -94,7 +95,7 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
     setError('');
     setDeleting(true);
     try {
-      const res = await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/trips/${trip.id}`), { method: 'DELETE' });
       if (res.ok || res.status === 404) {
         onDeleted(trip.id);
       } else {

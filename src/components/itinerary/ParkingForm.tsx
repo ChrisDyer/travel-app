@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { PlacesInput } from './PlacesInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { apiUrl } from '@/lib/api';
 
 const bookingStatuses: BookingStatus[] = ['unbooked', 'pending', 'confirmed'];
 
@@ -62,7 +63,7 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
       : `/api/trips/${tripId}/parking-bookings/${parking.id}`;
     const method = isNew ? 'POST' : 'PATCH';
 
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch(apiUrl(url), { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (res.ok) {
       const saved = await res.json();
       onSaved(saved, isNew);
@@ -78,7 +79,7 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
     setError('');
     setDeleting(true);
     try {
-      const res = await fetch(`/api/trips/${tripId}/parking-bookings/${parking.id}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/trips/${tripId}/parking-bookings/${parking.id}`), { method: 'DELETE' });
       if (res.ok) {
         onDeleted(parking.id);
       } else {

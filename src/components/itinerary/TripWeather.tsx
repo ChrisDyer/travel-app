@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { apiUrl } from '@/lib/api';
 
 interface WeatherDay {
   date: string;
@@ -35,7 +36,7 @@ export function TripWeather({ tripId }: { tripId: string }) {
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/trips/${tripId}/weather`)
+    fetch(apiUrl(`/api/trips/${tripId}/weather`))
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (active) setData(d); })
       .catch(() => {});

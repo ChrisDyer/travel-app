@@ -15,6 +15,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { MoreHorizontal, Printer, CalendarPlus, Copy, Trash2 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { apiUrl } from '@/lib/api';
 
 interface TripMoreMenuProps {
   trip: Trip;
@@ -30,7 +31,7 @@ export function TripMoreMenu({ trip }: TripMoreMenuProps) {
     if (duplicating) return;
     setDuplicating(true);
     try {
-      const res = await fetch(`/api/trips/${trip.id}/duplicate`, { method: 'POST' });
+      const res = await fetch(apiUrl(`/api/trips/${trip.id}/duplicate`), { method: 'POST' });
       if (!res.ok) throw new Error();
       const copy = await res.json() as Trip;
       toast('Trip duplicated');
@@ -45,7 +46,7 @@ export function TripMoreMenu({ trip }: TripMoreMenuProps) {
   async function handleDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/trips/${trip.id}`), { method: 'DELETE' });
       if (!res.ok) throw new Error();
       toast('Trip deleted');
       router.push('/trips');
@@ -65,11 +66,11 @@ export function TripMoreMenu({ trip }: TripMoreMenuProps) {
           <MoreHorizontal className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuLinkItem href={`/trips/${trip.id}/print`} target="_blank" closeOnClick>
+          <DropdownMenuLinkItem href={apiUrl(`/trips/${trip.id}/print`)} target="_blank" closeOnClick>
             <Printer className="h-4 w-4" />
             Print / PDF
           </DropdownMenuLinkItem>
-          <DropdownMenuLinkItem href={`/api/trips/${trip.id}/export`} closeOnClick>
+          <DropdownMenuLinkItem href={apiUrl(`/api/trips/${trip.id}/export`)} closeOnClick>
             <CalendarPlus className="h-4 w-4" />
             Export to calendar
           </DropdownMenuLinkItem>

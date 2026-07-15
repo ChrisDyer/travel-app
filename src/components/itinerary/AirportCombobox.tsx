@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { apiUrl } from '@/lib/api';
 
 interface Airport {
   iata: string;
@@ -20,7 +21,7 @@ let cachedAirports: Airport[] | null = null;
 
 async function loadAirports(): Promise<Airport[]> {
   if (cachedAirports) return cachedAirports;
-  const res = await fetch('/airports.json');
+  const res = await fetch(apiUrl('/airports.json'));
   cachedAirports = await res.json();
   return cachedAirports!;
 }

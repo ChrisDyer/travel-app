@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { PlacesInput } from './PlacesInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { apiUrl } from '@/lib/api';
 
 interface EventFormProps {
   tripId: string;
@@ -64,7 +65,7 @@ export function EventForm({ tripId, day, days, event, onSaved, onDeleted, onClos
       : `/api/trips/${tripId}/events/${event.id}`;
     const method = isNew ? 'POST' : 'PATCH';
 
-    const res = await fetch(url, {
+    const res = await fetch(apiUrl(url), {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -83,7 +84,7 @@ export function EventForm({ tripId, day, days, event, onSaved, onDeleted, onClos
   async function handleDelete() {
     if (!event) return;
     setDeleting(true);
-    const res = await fetch(`/api/trips/${tripId}/events/${event.id}`, { method: 'DELETE' });
+    const res = await fetch(apiUrl(`/api/trips/${tripId}/events/${event.id}`), { method: 'DELETE' });
     if (res.ok) {
       onDeleted(event.id);
     } else {

@@ -28,6 +28,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const { nonce: stateNonce, returnTo } = parseState(searchParams.get('state') ?? '');
+  // NEXT_PUBLIC_APP_URL is the legacy travel.zo-bot.com origin (deliberately unchanged —
+  // see auth/route.ts). returnTo is NOT basePath-prefixed here: this app can't reliably
+  // reconstruct its externally-visible origin from request.url behind nginx (confirmed:
+  // it resolves to the internal bind address, not the Host header), so the redirect below
+  // lands on travel.zo-bot.com, which nginx then 301s to zo-bot.com/travel, adding the
+  // basePath prefix via $request_uri. Do not "fix" this to look more direct — a single
+  // /travel prefix here would double up after that redirect.
   const base = process.env.NEXT_PUBLIC_APP_URL;
 
   const cookieStore = await cookies();
@@ -56,6 +63,8 @@ export async function GET(request: Request) {
       code,
       client_id: process.env.GOOGLE_GMAIL_CLIENT_ID!,
       client_secret: process.env.GOOGLE_GMAIL_CLIENT_SECRET!,
+      // Must exactly match the redirect_uri sent to /o/oauth2/v2/auth (see auth/route.ts
+      // for why this is deliberately NOT basePath-prefixed).
       redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/gmail/callback`,
       grant_type: 'authorization_code',
     }),

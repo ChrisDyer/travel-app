@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ImagePlus, Home } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { statusLabel } from '@/lib/trip-status';
+import { apiUrl } from '@/lib/api';
 import type { TripStatus } from '@/types/travel';
 
 export default function NewTripPage() {
@@ -48,7 +49,7 @@ export default function NewTripPage() {
       ),
     };
 
-    const res = await fetch('/api/trips', {
+    const res = await fetch(apiUrl('/api/trips'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -60,7 +61,7 @@ export default function NewTripPage() {
         try {
           const fd = new FormData();
           fd.append('file', coverFile);
-          const imgRes = await fetch(`/api/trips/${trip.id}/cover-image`, { method: 'POST', body: fd });
+          const imgRes = await fetch(apiUrl(`/api/trips/${trip.id}/cover-image`), { method: 'POST', body: fd });
           if (!imgRes.ok) {
             toast('Trip created, but the cover photo failed to upload. Add it from Edit Trip.', 'error');
           }

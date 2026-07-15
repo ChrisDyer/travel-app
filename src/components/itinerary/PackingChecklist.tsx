@@ -5,6 +5,7 @@ import { PackingItem, PackingCategory } from '@/types/travel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { apiUrl } from '@/lib/api';
 
 const CATEGORIES: PackingCategory[] = [
   'Documents & Essentials',
@@ -33,7 +34,7 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
     setSuggesting(true);
     setAddError('');
     try {
-      const res = await fetch(`/api/trips/${tripId}/packing/suggest`, { method: 'POST' });
+      const res = await fetch(apiUrl(`/api/trips/${tripId}/packing/suggest`), { method: 'POST' });
       if (!res.ok) { setAddError('Could not get suggestions. Please try again.'); return; }
       const { added } = await res.json() as { added: PackingItem[] };
       if (added?.length) setItems((prev) => [...prev, ...added]);
@@ -49,7 +50,7 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
     setAddError('');
     const next = !item.isPacked;
     try {
-      const res = await fetch(`/api/trips/${tripId}/packing/${item.id}`, {
+      const res = await fetch(apiUrl(`/api/trips/${tripId}/packing/${item.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isPacked: next }),
@@ -67,7 +68,7 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
   async function deleteItem(id: string) {
     setAddError('');
     try {
-      const res = await fetch(`/api/trips/${tripId}/packing/${id}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/trips/${tripId}/packing/${id}`), { method: 'DELETE' });
       if (res.ok || res.status === 404) {
         setItems((prev) => prev.filter((i) => i.id !== id));
       } else {
@@ -82,7 +83,7 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
     if (!itemText.trim()) return;
     setAddError('');
     const sortOrder = items.filter((i) => i.category === category).length;
-    const res = await fetch(`/api/trips/${tripId}/packing`, {
+    const res = await fetch(apiUrl(`/api/trips/${tripId}/packing`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ category, item: itemText.trim(), sortOrder }),

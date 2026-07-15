@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import type { TripDay, TripEvent, TripFlight, TripHotel, TripRentalCar, TripParking, TripTransit, Proposal, ProposedEvent, ProposedFlight, ProposedHotel, ProposedRentalCar, ProposedParking, ProposedTransit } from '@/types/travel';
+import { apiUrl } from '@/lib/api';
 
 interface TripAssistantProps {
   tripId: string;
@@ -72,7 +73,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
     abortRef.current = new AbortController();
 
     try {
-      const res = await fetch(`/api/trips/${tripId}/assistant/suggest`, {
+      const res = await fetch(apiUrl(`/api/trips/${tripId}/assistant/suggest`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -190,7 +191,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
     setApplying(true);
     setApplyError('');
     try {
-      const res = await fetch(`/api/trips/${tripId}/assistant/apply`, {
+      const res = await fetch(apiUrl(`/api/trips/${tripId}/assistant/apply`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ proposals: selected }),
@@ -268,7 +269,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
                 <p className="font-medium text-amber-900 mb-2">Gmail not connected</p>
                 <p className="text-amber-700 mb-3">Connect your Gmail so the assistant can scan for travel confirmations.</p>
                 <a
-                  href={`/api/gmail/auth?returnTo=/trips/${tripId}`}
+                  href={apiUrl(`/api/gmail/auth?returnTo=/trips/${tripId}`)}
                   className="inline-block bg-amber-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors"
                 >
                   Connect Gmail

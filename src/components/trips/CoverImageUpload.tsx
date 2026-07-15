@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { apiUrl } from '@/lib/api';
 
 interface CoverImageUploadProps {
   tripId: string;
@@ -28,7 +29,7 @@ export function CoverImageUpload({ tripId, currentUrl, onChanged }: CoverImageUp
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch(`/api/trips/${tripId}/cover-image`, { method: 'POST', body: fd });
+      const res = await fetch(apiUrl(`/api/trips/${tripId}/cover-image`), { method: 'POST', body: fd });
       if (res.ok) {
         const { coverImageUrl } = await res.json();
         setPreview(coverImageUrl);
@@ -50,7 +51,7 @@ export function CoverImageUpload({ tripId, currentUrl, onChanged }: CoverImageUp
   async function handleRemove() {
     setError(null);
     try {
-      const res = await fetch(`/api/trips/${tripId}/cover-image`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/trips/${tripId}/cover-image`), { method: 'DELETE' });
       if (!res.ok && res.status !== 404) {
         setError('Could not remove the photo. Please try again.');
         return;
@@ -68,7 +69,7 @@ export function CoverImageUpload({ tripId, currentUrl, onChanged }: CoverImageUp
       <span className="text-sm font-medium text-stone-700">Cover Photo</span>
       {preview ? (
         <div className="relative w-full h-32 rounded-lg overflow-hidden border border-stone-200 group">
-          <img src={preview} alt="Cover" className="w-full h-full object-cover" />
+          <img src={apiUrl(preview)} alt="Cover" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <button
               type="button"

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { apiUrl } from '@/lib/api';
 
 const bookingStatuses: BookingStatus[] = ['unbooked', 'pending', 'confirmed'];
 const transitTypes: { value: TransitType; label: string }[] = [
@@ -72,7 +73,7 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
       : `/api/trips/${tripId}/transit/${transit.id}`;
     const method = isNew ? 'POST' : 'PATCH';
 
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch(apiUrl(url), { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (res.ok) {
       const saved = await res.json();
       onSaved(saved, isNew);
@@ -86,7 +87,7 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
   async function handleDelete() {
     if (!transit) return;
     setDeleting(true);
-    const res = await fetch(`/api/trips/${tripId}/transit/${transit.id}`, { method: 'DELETE' });
+    const res = await fetch(apiUrl(`/api/trips/${tripId}/transit/${transit.id}`), { method: 'DELETE' });
     if (res.ok) {
       onDeleted(transit.id);
     } else {

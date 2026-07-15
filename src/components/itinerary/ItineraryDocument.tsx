@@ -20,6 +20,7 @@ import { TripCostSummary } from './TripCostSummary';
 import { TripAssistant } from '@/components/trips/TripAssistant';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { apiUrl } from '@/lib/api';
 
 interface ItineraryDocumentProps {
   trip: Trip;
@@ -92,10 +93,10 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
       e.id === a.id ? { ...e, sortOrder: aOrder } : e.id === b.id ? { ...e, sortOrder: bOrder } : e
     ));
     try {
-      const r1 = await fetch(`/api/trips/${trip.id}/events/${a.id}`, {
+      const r1 = await fetch(apiUrl(`/api/trips/${trip.id}/events/${a.id}`), {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sortOrder: aOrder }),
       });
-      const r2 = await fetch(`/api/trips/${trip.id}/events/${b.id}`, {
+      const r2 = await fetch(apiUrl(`/api/trips/${trip.id}/events/${b.id}`), {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sortOrder: bOrder }),
       });
       if (!r1.ok || !r2.ok) throw new Error();

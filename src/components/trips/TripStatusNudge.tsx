@@ -6,6 +6,7 @@ import { Trip, TripStatus } from '@/types/travel';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { localToday } from '@/lib/trip-status';
+import { apiUrl } from '@/lib/api';
 
 export function TripStatusNudge({ trip }: { trip: Trip }) {
   const router = useRouter();
@@ -26,7 +27,7 @@ export function TripStatusNudge({ trip }: { trip: Trip }) {
   async function apply() {
     setSaving(true);
     try {
-      const res = await fetch(`/api/trips/${trip.id}`, {
+      const res = await fetch(apiUrl(`/api/trips/${trip.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: suggestion!.status }),

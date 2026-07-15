@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getLogoPathFromAny } from '@/lib/logos';
+import { apiUrl } from '@/lib/api';
 
 interface BrandLogoProps {
   name?: string | null;
@@ -16,7 +17,7 @@ export function BrandLogo({ name, fallbackNames = [], fallback, heightClass = 'h
   if (logo) {
     return (
       <img
-        src={logo}
+        src={apiUrl(logo)}
         alt={name ?? fallback}
         className={`${heightClass} w-auto max-w-[72px] object-contain shrink-0`}
         onError={() => setFailed(true)}
