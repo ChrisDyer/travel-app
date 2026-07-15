@@ -214,16 +214,16 @@ In Cloudflare DNS, set an A record for `travel` pointing to the VPS IP, **Proxie
 
 ```powershell
 function Deploy-Travel {
-    ssh chris@91.99.230.234 "export PATH=~/.nvm/versions/node/v24.16.0/bin:`$PATH && cd ~/travel-app && git pull && npm install && sudo rm -rf .next && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public/. .next/standalone/public/ && pm2 restart travel-app"
+    ssh chris@91.99.230.234 "export PATH=~/.nvm/versions/node/v24.16.0/bin:`$PATH && cd ~/travel-app && git pull && npm install && rm -rf .next && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public/. .next/standalone/public/ && pm2 restart travel-app"
 }
 ```
 
 Run `Deploy-Travel` from any PowerShell prompt.
 
-> **`sudo rm -rf .next` before every build** — static files copied into
-> `.next/standalone/public/` in a previous deploy can be owned by root,
-> causing subsequent builds to fail with `EACCES: permission denied`.
-> Removing `.next/` first prevents this.
+> **`rm -rf .next` before every build** — stale files in `.next/standalone/public/` from
+> a previous deploy can break the next build. If a build fails with
+> `EACCES: permission denied`, root-owned leftovers from earlier sudo-run deploys are the
+> cause — fix once with `sudo rm -rf ~/travel-app/.next`.
 
 ---
 
@@ -258,7 +258,7 @@ cd ~/travel-app
 git log --oneline -10          # Find the last good commit hash
 git checkout <commit-hash>
 export PATH=~/.nvm/versions/node/v24.16.0/bin:$PATH
-sudo rm -rf .next && npm run build
+rm -rf .next && npm run build
 cp -r .next/static .next/standalone/.next/static
 cp -r public/. .next/standalone/public/
 pm2 restart travel-app
@@ -271,14 +271,18 @@ git checkout main
 
 ## Backups
 
+The actual crontab (verify with `crontab -l`) keeps dated local copies with 30-day
+retention, mirroring the finance-app scheme:
+
 ```bash
-crontab -e
-# Add:
-0 2 * * * rclone copy ~/travel-app/local.db onedrive:/travel-app-backups/ --log-file=/var/log/rclone-travel.log
+10 2 * * * mkdir -p ~/travel-app/backups && cp ~/travel-app/local.db ~/travel-app/backups/local-$(date +\%Y-\%m-\%d).db
+10 3 * * * rclone sync ~/travel-app/backups/ onedrive:travel-backups >> ~/backup.log 2>&1
+10 4 * * * find ~/travel-app/backups -name "local-*.db" -mtime +30 -delete
 ```
 
-> Cover images now live inside `local.db` as blobs (`trip_cover_images` table), so the
-> backup line above covers them automatically — no separate photo sync is needed.
+> Cover images now live inside `local.db` as blobs (`trip_cover_images` table), so the DB
+> backup covers them automatically. A legacy 2:15 AM `trip-photos` sync line remains in
+> the crontab — harmless, removable once confirmed empty.
 
 Enable Hetzner automatic snapshots as a full-disk fallback:
 Hetzner Console → Server → **Backups** → Enable.
