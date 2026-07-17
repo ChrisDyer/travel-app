@@ -257,9 +257,9 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
         ))}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 lg:grid-cols-[640px_1fr] gap-8 items-start">
+      <div className="mt-8 grid min-w-0 grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,560px)_minmax(0,1fr)] xl:gap-8">
         {/* Left column: map + bookings + cancellations */}
-        <div className="lg:sticky lg:top-8">
+        <div className="min-w-0 lg:sticky lg:top-8">
           <div className={cn(mobileTab !== 'overview' && 'max-lg:hidden', 'print:block')}>
             <TripMap
               locations={mapLocations}
@@ -306,7 +306,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
         </div>
 
         {/* Right column: daily itinerary */}
-        <div className={cn(mobileTab !== 'itinerary' && 'max-lg:hidden', 'print:block', 'space-y-12 max-lg:pb-24')}>
+        <div className={cn(mobileTab !== 'itinerary' && 'max-lg:hidden', 'print:block', 'min-w-0 space-y-12 max-lg:pb-24')}>
           <div className="flex justify-end">
             <AddPlanMenu onAdd={handleAdd} />
           </div>
@@ -465,3 +465,4 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
     </>
   );
 }
+
