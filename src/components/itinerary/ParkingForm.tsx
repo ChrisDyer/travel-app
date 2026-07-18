@@ -97,7 +97,7 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2">
             <span>🅿️</span> {isNew ? 'Add Parking' : 'Edit Parking'}
           </DialogTitle>
         </DialogHeader>

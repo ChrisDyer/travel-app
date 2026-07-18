@@ -28,12 +28,25 @@ test("canonical Travel manifest preserves IDs, labels, order, and hrefs", () => 
 test("switcher and shell expose required desktop and mobile semantics", () => {
   assert.match(switcherSource, /placement: "sidebar" \| "mobile-header"/);
   assert.match(switcherSource, /aria-current=\{current \? "page"/);
-  assert.match(switcherSource, /Close app switcher/);
+  // Canonical presentation (app-shell contract appendix): dropdown panel in both
+  // placements on the dark slate-950 menu surface; every destination, including the
+  // current app, is a real link.
+  assert.match(switcherSource, /DropdownMenuContent/);
+  assert.doesNotMatch(switcherSource, /role="dialog"/);
+  assert.match(switcherSource, /bg-slate-950/);
+  assert.match(switcherSource, /DropdownMenuLinkItem/);
+  assert.match(switcherSource, /Zo-Bot/);
   assert.match(shellSource, /placement="sidebar"/);
   assert.match(shellSource, /placement="mobile-header"/);
   assert.match(shellSource, /aria-label="Travel navigation"/);
   assert.match(shellSource, /bg-slate-900/);
   assert.match(shellSource, /bg-blue-600/);
+});
+
+test("switcher uses the canonical shared glyph set", () => {
+  for (const glyph of ["LayoutDashboard", "Banknote", "Plane", "Mail", "Home", "FileText"]) {
+    assert.match(destinationsSource, new RegExp(`icon: ${glyph}`));
+  }
 });
 
 test("interactive Travel routes use the shared shell and print route stays shell-free", () => {

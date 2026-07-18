@@ -8,7 +8,7 @@ export const statusColors: Record<TripStatus, string> = {
 };
 
 export function statusLabel(status: TripStatus): string {
-  return status.replace('-', ' ');
+  return status.replace('-', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** today: 'YYYY-MM-DD' in the user's local zone. Call with localToday() on the client. */

@@ -119,7 +119,7 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
 
   if (tripList.length === 0) {
     return (
-      <div className="text-center py-24 text-stone-400">
+      <div className="text-center py-24 text-slate-400">
         <p className="text-lg">No trips yet.</p>
         <Link href="/trips/new">
           <Button variant="outline" className="mt-4">Plan your first trip</Button>
@@ -152,7 +152,7 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
         <div className="flex flex-wrap gap-1.5">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize transition-colors ${statusFilter === 'all' ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
+            className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize transition-colors ${statusFilter === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
           >
             All
           </button>
@@ -160,7 +160,7 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize transition-colors ${statusFilter === s ? statusColors[s] : 'bg-stone-100 text-stone-400 hover:bg-stone-200'}`}
+              className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize transition-colors ${statusFilter === s ? statusColors[s] : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
             >
               {statusLabel(s)}
             </button>
@@ -187,21 +187,21 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
       </div>
 
       {visible.length === 0 ? (
-        <div className="text-center py-16 text-stone-400">
+        <div className="text-center py-16 text-slate-400">
           <p>No trips match — try clearing your filters.</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>Clear filters</Button>
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((trip) => (
-            <div key={trip.id} className="relative bg-white rounded-xl border border-stone-200 hover:border-stone-400 hover:shadow-sm transition-all overflow-hidden">
+            <div key={trip.id} className="relative bg-white rounded-xl border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all overflow-hidden">
               <Link href={`/trips/${trip.id}`} className="block">
                 <div className="h-36 w-full relative">
                   {trip.coverImageUrl ? (
                     <img src={apiUrl(trip.coverImageUrl)} alt={trip.title} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-stone-200 to-stone-300 flex items-center justify-center">
-                      <span className="font-serif text-4xl text-stone-400">{trip.destination.charAt(0).toUpperCase()}</span>
+                    <div className="h-full w-full bg-slate-200 flex items-center justify-center">
+                      <span className="font-serif text-4xl text-slate-400">{trip.destination.charAt(0).toUpperCase()}</span>
                     </div>
                   )}
                   <span className={`absolute bottom-2 left-2 shadow-sm text-xs font-medium px-2.5 py-1 rounded-full capitalize ${statusColors[trip.status] ?? statusColors.planning}`}>
@@ -209,10 +209,10 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
                   </span>
                 </div>
                 <div className="p-4">
-                  <h2 className="text-lg font-serif font-semibold text-stone-900 truncate">{trip.title}</h2>
-                  <p className="text-sm text-stone-500 truncate">{trip.destination}</p>
-                  <p className="text-sm text-stone-400 mt-1">
-                    {formatDateRange(trip.startDate, trip.endDate)} <span className="text-xs text-stone-400">· {tripTiming(trip.startDate, trip.endDate, today)}</span>
+                  <h2 className="text-lg font-serif font-semibold text-slate-900 truncate">{trip.title}</h2>
+                  <p className="text-sm text-slate-500 truncate">{trip.destination}</p>
+                  <p className="text-sm text-slate-400 mt-1">
+                    {formatDateRange(trip.startDate, trip.endDate)} <span className="text-xs text-slate-400">· {tripTiming(trip.startDate, trip.endDate, today)}</span>
                   </p>
                 </div>
               </Link>
@@ -257,7 +257,7 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
 
           <Link
             href="/trips/new"
-            className="flex items-center justify-center rounded-xl border border-dashed border-stone-300 text-stone-400 hover:border-stone-400 hover:text-stone-600 transition-colors min-h-36"
+            className="flex items-center justify-center rounded-xl border border-dashed border-slate-300 text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors min-h-36"
           >
             + New trip
           </Link>

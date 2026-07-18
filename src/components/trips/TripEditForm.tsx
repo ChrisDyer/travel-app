@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Trip, TripStatus } from '@/types/travel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,8 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmShorten, setConfirmShorten] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState('');
   const [travelMode, setTravelMode] = useState<'fly' | 'drive'>(trip.travelMode ?? 'fly');
   const [rentalCarNeeded, setRentalCarNeeded] = useState(!!trip.rentalCarNeeded);
@@ -39,8 +41,11 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    submit(new FormData(e.currentTarget), false);
+  }
+
+  async function submit(form: FormData, shortenAcknowledged: boolean) {
     setError('');
-    const form = new FormData(e.currentTarget);
 
     const startDate = form.get('startDate') as string;
     const endDate = form.get('endDate') as string;
@@ -48,10 +53,11 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
       setError('End date must be on or after start date.');
       return;
     }
-    if (startDate && endDate && endDate < trip.endDate) {
-      const proceed = window.confirm('Shortening the trip will remove days from the end. Any events on removed days will be PERMANENTLY DELETED. Continue?');
-      if (!proceed) return;
+    if (startDate && endDate && endDate < trip.endDate && !shortenAcknowledged) {
+      setConfirmShorten(true);
+      return;
     }
+    setConfirmShorten(false);
 
     setLoading(true);
     const body = {
@@ -113,10 +119,10 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif">Edit Trip</DialogTitle>
+          <DialogTitle>Edit Trip</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-1.5">
             <Label htmlFor="title">Trip Name <span className="text-red-400">*</span></Label>
             <Input id="title" name="title" defaultValue={trip.title} required placeholder="Summer in Italy" />
@@ -236,6 +242,29 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
           />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
+
+          {confirmShorten && (
+            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-2">
+              <p className="text-sm text-red-700">
+                Shortening <span className="font-medium">{trip.title}</span> removes days from the end,
+                and any events on those days will be permanently deleted.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  disabled={loading}
+                  onClick={() => formRef.current && submit(new FormData(formRef.current), true)}
+                >
+                  Shorten trip
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setConfirmShorten(false)}>
+                  Keep current dates
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-between pt-2">
             {!confirmDelete ? (

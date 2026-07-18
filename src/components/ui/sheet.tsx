@@ -55,7 +55,7 @@ function SheetContent({
         className={cn(
           "fixed z-50 bg-white outline-none overflow-y-auto no-print",
           "data-open:animate-in data-closed:animate-out duration-200",
-          // ≥sm: right side panel
+          // â‰¥sm: right side panel
           "sm:inset-y-0 sm:right-0 sm:left-auto sm:h-full sm:w-full sm:max-w-md sm:shadow-xl sm:border-l sm:border-stone-200",
           "sm:data-open:slide-in-from-right sm:data-closed:slide-out-to-right",
           // <sm: bottom sheet
@@ -115,7 +115,7 @@ function SheetTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="sheet-title"
-      className={cn("font-serif text-lg font-semibold text-stone-900", className)}
+      className={cn("text-lg font-semibold text-stone-900", className)}
       {...props}
     />
   )

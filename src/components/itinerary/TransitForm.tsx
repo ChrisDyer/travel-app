@@ -101,7 +101,7 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2">
             <span>🚆</span> {isNew ? 'Add Transit' : 'Edit Transit'}
           </DialogTitle>
         </DialogHeader>

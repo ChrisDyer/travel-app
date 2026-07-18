@@ -91,7 +91,7 @@ export function HotelForm({ tripId, hotel, onSaved, onDeleted, onClose }: HotelF
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2">
             <span>🏨</span> {isNew ? 'Add Hotel' : 'Edit Hotel'}
           </DialogTitle>
         </DialogHeader>

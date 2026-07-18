@@ -98,7 +98,7 @@ export function EventForm({ tripId, day, days, event, onSaved, onDeleted, onClos
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif">{isNew ? 'Add Event' : 'Edit Event'}</DialogTitle>
+          <DialogTitle>{isNew ? 'Add Event' : 'Edit Event'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
