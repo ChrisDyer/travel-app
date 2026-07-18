@@ -48,6 +48,8 @@ function cancellationsForTrip(tripId: string, today: string) {
     .sort((a, b) => a.deadline.localeCompare(b.deadline));
 
   return {
+    // count/next keep their original semantics (all dated deadlines, even past ones)
+    // for backward compatibility; upcoming is the actionable next-30-days window.
     count: all.length,
     next: all[0] ? {
       type: all[0].type,
@@ -55,6 +57,10 @@ function cancellationsForTrip(tripId: string, today: string) {
       deadline: all[0].deadline,
       daysUntil: all[0].daysUntil,
     } : null,
+    upcoming: all
+      .filter((row) => row.daysUntil >= 0 && row.daysUntil <= 30)
+      .slice(0, 10)
+      .map(({ type, label, deadline, daysUntil }) => ({ type, label, deadline, daysUntil })),
   };
 }
 
