@@ -6,6 +6,7 @@ import { AppSwitcher } from "./AppSwitcher";
 import { CURRENT_APP_ID, appDestinations } from "./destinations";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useReadOnly } from "@/lib/read-only";
 
 type LocalNavId = "trips" | "new";
 
@@ -40,6 +41,9 @@ export function TravelShell({
   children,
   contentClassName,
 }: TravelShellProps) {
+  const readOnly = useReadOnly();
+  const visibleLocalNav = readOnly ? localNav.filter((item) => item.id !== "new") : localNav;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-56 flex-col overflow-y-auto bg-slate-900 px-3 py-4 text-slate-200 lg:flex">
@@ -53,7 +57,7 @@ export function TravelShell({
         <div className="mt-5 border-t border-slate-800 pt-5">
           <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Travel</p>
           <nav className="mt-2 grid gap-1" aria-label="Travel navigation">
-            {localNav.map((item) => {
+            {visibleLocalNav.map((item) => {
               const Icon = item.icon;
               const active = item.id === activeLocalNav;
               return (
@@ -125,6 +129,9 @@ export function TravelShell({
 }
 
 export function NewTripAction() {
+  const readOnly = useReadOnly();
+  if (readOnly) return null;
+
   return (
     <Link href="/trips/new">
       <Button>

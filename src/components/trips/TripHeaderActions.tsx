@@ -9,12 +9,14 @@ import { TripMoreMenu } from './TripMoreMenu';
 import { Pencil } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { tripTiming, localToday } from '@/lib/trip-status';
+import { useReadOnly } from '@/lib/read-only';
 
 interface TripHeaderActionsProps {
   trip: Trip;
 }
 
 export function TripHeaderActions({ trip }: TripHeaderActionsProps) {
+  const readOnly = useReadOnly();
   const [editing, setEditing] = useState(false);
   const router = useRouter();
 
@@ -22,10 +24,12 @@ export function TripHeaderActions({ trip }: TripHeaderActionsProps) {
     <>
       <span className="max-sm:hidden text-xs text-stone-400">{tripTiming(trip.startDate, trip.endDate, localToday())}</span>
 
-      <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-stone-500 hover:text-stone-800">
-        <Pencil className="h-4 w-4 mr-1" />
-        Edit
-      </Button>
+      {!readOnly && (
+        <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-stone-500 hover:text-stone-800">
+          <Pencil className="h-4 w-4 mr-1" />
+          Edit
+        </Button>
+      )}
 
       <TripMoreMenu trip={trip} />
 

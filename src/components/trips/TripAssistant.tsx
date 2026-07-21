@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import type { TripDay, TripEvent, TripFlight, TripHotel, TripRentalCar, TripParking, TripTransit, Proposal, ProposedEvent, ProposedFlight, ProposedHotel, ProposedRentalCar, ProposedParking, ProposedTransit } from '@/types/travel';
 import { apiUrl } from '@/lib/api';
+import { useReadOnly } from '@/lib/read-only';
 
 interface TripAssistantProps {
   tripId: string;
@@ -29,6 +30,7 @@ interface HistoryTurn {
 }
 
 export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onHotelsAdded, onRentalCarsAdded, onParkingAdded, onTransitAdded }: TripAssistantProps) {
+  const readOnly = useReadOnly();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'email' | 'brainstorm'>('email');
   const [query, setQuery] = useState('');
@@ -219,6 +221,9 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
   const updateCardEdit = (id: string, field: string, value: string) => {
     setCards((prev) => prev.map((c) => c.id === id ? { ...c, edits: { ...c.edits, [field]: value } } : c));
   };
+
+  // Writes itinerary data end-to-end — hide the entry point entirely for read-only users.
+  if (readOnly) return null;
 
   return (
     <div className="mt-8 no-print">

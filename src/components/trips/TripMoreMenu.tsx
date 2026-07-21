@@ -16,12 +16,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { MoreHorizontal, Printer, CalendarPlus, Copy, Trash2 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { apiUrl } from '@/lib/api';
+import { useReadOnly } from '@/lib/read-only';
 
 interface TripMoreMenuProps {
   trip: Trip;
 }
 
 export function TripMoreMenu({ trip }: TripMoreMenuProps) {
+  const readOnly = useReadOnly();
   const router = useRouter();
   const [duplicating, setDuplicating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -74,15 +76,19 @@ export function TripMoreMenu({ trip }: TripMoreMenuProps) {
             <CalendarPlus className="h-4 w-4" />
             Export to calendar
           </DropdownMenuLinkItem>
-          <DropdownMenuItem onClick={handleDuplicate} disabled={duplicating}>
-            <Copy className="h-4 w-4" />
-            Duplicate trip
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}>
-            <Trash2 className="h-4 w-4" />
-            Delete trip
-          </DropdownMenuItem>
+          {!readOnly && (
+            <DropdownMenuItem onClick={handleDuplicate} disabled={duplicating}>
+              <Copy className="h-4 w-4" />
+              Duplicate trip
+            </DropdownMenuItem>
+          )}
+          {!readOnly && <DropdownMenuSeparator />}
+          {!readOnly && (
+            <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="h-4 w-4" />
+              Delete trip
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

@@ -137,8 +137,14 @@ This app is **single-user**. Every request runs as the `local` user (`getUserId(
 `src/lib/auth.ts`), both in local development and in production.
 
 In production, access is gated by [Cloudflare Access](https://www.cloudflare.com/zero-trust/products/access/),
-which fronts the entire site with Google SSO and only admits the configured owner email.
-All trips therefore belong to the one allowed user.
+which fronts the entire site with Google SSO. Multiple emails can be admitted (e.g. a
+shared household policy), but all trips still belong to the single `local` user — data
+is not partitioned per person.
+
+Within that shared login, an `ADMIN_EMAILS` allowlist grants a **per-user read-only
+role**: any authenticated email not on the list gets 403s on write requests and has
+write controls hidden in the UI, while still being able to view every trip. See
+`CLAUDE.md` for how this is implemented.
 
 > The schema carries a `user_id` column (always `local`) so the app *could* be made
 > multi-user later by reading the `cf-access-authenticated-user-email` header in

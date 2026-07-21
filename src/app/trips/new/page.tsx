@@ -13,8 +13,10 @@ import { statusLabel } from '@/lib/trip-status';
 import { apiUrl } from '@/lib/api';
 import { TravelShell } from '@/appShell/TravelShell';
 import type { TripStatus } from '@/types/travel';
+import { useReadOnly } from '@/lib/read-only';
 
 export default function NewTripPage() {
+  const readOnly = useReadOnly();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -74,6 +76,24 @@ export default function NewTripPage() {
       setError('Something went wrong. Please try again.');
       setLoading(false);
     }
+  }
+
+  // Shouldn't be reachable — NewTripAction is hidden for read-only users — but guard a
+  // direct /trips/new visit as defense in depth (records-app Phase 3 precedent).
+  if (readOnly) {
+    return (
+      <TravelShell
+        title="New Trip"
+        backHref="/trips"
+        backLabel="Trips"
+        activeLocalNav="new"
+        contentClassName="max-w-lg"
+      >
+        <p className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+          New trip unavailable — this account is read-only.
+        </p>
+      </TravelShell>
+    );
   }
 
   return (

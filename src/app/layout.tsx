@@ -3,6 +3,8 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toast";
 import { apiUrl } from "@/lib/api";
+import { getAccessInfo } from "@/lib/auth";
+import { ReadOnlyProvider } from "@/lib/read-only";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,19 +27,23 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { readOnly } = await getAccessInfo();
+
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} h-full antialiased`}>
       <head>
         <link rel="stylesheet" href={apiUrl("/print.css")} />
       </head>
       <body className="min-h-full flex flex-col font-sans">
-        {children}
-        <Toaster />
+        <ReadOnlyProvider readOnly={readOnly}>
+          {children}
+          <Toaster />
+        </ReadOnlyProvider>
       </body>
     </html>
   );

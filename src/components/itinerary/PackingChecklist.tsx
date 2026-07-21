@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiUrl } from '@/lib/api';
+import { useReadOnly } from '@/lib/read-only';
 
 const CATEGORIES: PackingCategory[] = [
   'Documents & Essentials',
@@ -20,6 +21,7 @@ interface PackingChecklistProps {
 }
 
 export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps) {
+  const readOnly = useReadOnly();
   const [items, setItems] = useState<PackingItem[]>(initialItems);
   const [addingCategory, setAddingCategory] = useState<PackingCategory | null>(null);
   const [newItemCategory, setNewItemCategory] = useState<PackingCategory>(CATEGORIES[0]);
@@ -129,9 +131,11 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
           {items.length > 0 && (
             <span className="text-sm text-stone-400">{packed} / {items.length} packed</span>
           )}
-          <Button variant="outline" size="sm" onClick={suggestItems} disabled={suggesting} className="no-print">
-            {suggesting ? 'Thinking…' : '✨ AI suggest'}
-          </Button>
+          {!readOnly && (
+            <Button variant="outline" size="sm" onClick={suggestItems} disabled={suggesting} className="no-print">
+              {suggesting ? 'Thinking…' : '✨ AI suggest'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -150,12 +154,13 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
                       type="checkbox"
                       checked={pi.isPacked}
                       onChange={() => togglePacked(pi)}
-                      className="w-4 h-4 rounded border-stone-300 accent-stone-700 cursor-pointer shrink-0"
+                      disabled={readOnly}
+                      className="w-4 h-4 rounded border-stone-300 accent-stone-700 cursor-pointer shrink-0 disabled:cursor-not-allowed"
                     />
                     <span className={`text-sm flex-1 ${pi.isPacked ? 'line-through text-stone-400' : 'text-stone-700'}`}>
                       {pi.item}
                     </span>
-                    {confirmDeleteId === pi.id ? (
+                    {!readOnly && (confirmDeleteId === pi.id ? (
                       <span className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => { deleteItem(pi.id); setConfirmDeleteId(null); }}
@@ -178,12 +183,12 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
                       >
                         ✕
                       </button>
-                    )}
+                    ))}
                   </li>
                 ))}
               </ul>
 
-              {addingCategory === cat ? (
+              {!readOnly && (addingCategory === cat ? (
                 <div className="mt-2 flex gap-2">
                   <Input
                     ref={addInputRef}
@@ -201,12 +206,13 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
                 >
                   + Add item
                 </button>
-              )}
+              ))}
             </div>
           );
         })}
       </div>
 
+      {!readOnly && (
       <div className="mt-8">
         {showGlobalAdd ? (
           <div className="space-y-2">
@@ -239,6 +245,7 @@ export function PackingChecklist({ tripId, initialItems }: PackingChecklistProps
           </Button>
         )}
       </div>
+      )}
     </section>
   );
 }

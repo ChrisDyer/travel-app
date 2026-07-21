@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CoverImageUpload } from './CoverImageUpload';
 import { statusLabel } from '@/lib/trip-status';
 import { apiUrl } from '@/lib/api';
+import { useReadOnly } from '@/lib/read-only';
 
 const statuses: TripStatus[] = ['planning', 'confirmed', 'in-progress', 'completed'];
 const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -26,6 +27,7 @@ interface TripEditFormProps {
 }
 
 export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: TripEditFormProps) {
+  const readOnly = useReadOnly();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -114,6 +116,10 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
       setDeleting(false);
     }
   }
+
+  // Shouldn't be reachable — every caller gates opening this form behind
+  // useReadOnly() — but guard the render directly as defense in depth.
+  if (readOnly) return null;
 
   return (
     <Dialog open onOpenChange={onClose}>

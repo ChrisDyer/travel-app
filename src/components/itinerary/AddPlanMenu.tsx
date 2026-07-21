@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { BookingKind } from './booking-selection';
 import { Plus, Plane, BedDouble, CarFront, SquareParking, TrainFront, CalendarPlus } from 'lucide-react';
+import { useReadOnly } from '@/lib/read-only';
 
 interface AddPlanMenuProps {
   onAdd: (kind: BookingKind) => void;
@@ -24,6 +25,9 @@ const items: { kind: BookingKind; label: string; icon: React.ElementType }[] = [
 ];
 
 export function AddPlanMenu({ onAdd }: AddPlanMenuProps) {
+  const readOnly = useReadOnly();
+  if (readOnly) return null;
+
   return (
     <div className="max-lg:fixed max-lg:bottom-5 max-lg:right-5 max-lg:z-30 lg:static no-print">
       <DropdownMenu>

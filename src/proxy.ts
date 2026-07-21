@@ -1,4 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { parseAdminEmails } from './lib/admin-emails';
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 // Primary auth is Cloudflare Access (Google SSO) in front of the whole site. This is an
 // optional defense-in-depth check: in production it also requires the identity header
@@ -7,13 +10,26 @@ import { NextResponse, type NextRequest } from 'next/server';
 // on Cloudflare Access alone. Local dev (no Cloudflare) is always left open.
 export function proxy(request: NextRequest) {
   if (process.env.NODE_ENV === 'production' && process.env.ALLOW_NO_ACCESS_HEADER !== '1') {
-    const email = request.headers.get('cf-access-authenticated-user-email');
+    const email = request.headers.get('cf-access-authenticated-user-email')?.toLowerCase() ?? null;
     // Allow same-VPS server-to-server calls (e.g. the homepage dashboard) that present
     // the shared internal token instead of going through Cloudflare Access.
     const token = process.env.INTERNAL_API_TOKEN;
-    const internal = token && request.headers.get('x-internal-token') === token;
+    const internal = Boolean(token) && request.headers.get('x-internal-token') === token;
     if (!email && !internal) {
       return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    // Per-user read-only role (see docs/plans/2026-07-per-user-read-only). Kept inside
+    // this production block, after the header/internal-token check, per program contract.
+    const { pathname } = request.nextUrl;
+    if (!SAFE_METHODS.has(request.method) && pathname.startsWith('/api') && !internal) {
+      const adminEmails = parseAdminEmails(process.env.ADMIN_EMAILS);
+      if (adminEmails.length > 0 && !adminEmails.includes(email ?? '')) {
+        return NextResponse.json(
+          { error: 'read_only', message: 'This account is read-only.' },
+          { status: 403 }
+        );
+      }
     }
   }
   return NextResponse.next();

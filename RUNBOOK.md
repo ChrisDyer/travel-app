@@ -96,7 +96,14 @@ GOOGLE_GMAIL_CLIENT_SECRET=
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
 NEXT_PUBLIC_APP_URL=https://travel.zo-bot.com
 DB_PATH=/home/chris/travel-app/local.db
+INTERNAL_API_TOKEN=
+ADMIN_EMAILS=chrissdyer@gmail.com
 ```
+
+> **`ADMIN_EMAILS`** — per-user read-only role (see `CLAUDE.md`). Comma-separated
+> allowlist; any other authenticated email is read-only (403 on writes + hidden
+> controls). Unset/empty => everyone has full access (fail-open) — the app deploys
+> safely before this line is added.
 
 See `README.md` for how to obtain each value.
 

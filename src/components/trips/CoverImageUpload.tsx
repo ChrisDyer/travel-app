@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { apiUrl } from '@/lib/api';
+import { useReadOnly } from '@/lib/read-only';
 
 interface CoverImageUploadProps {
   tripId: string;
@@ -12,6 +13,7 @@ interface CoverImageUploadProps {
 }
 
 export function CoverImageUpload({ tripId, currentUrl, onChanged }: CoverImageUploadProps) {
+  const readOnly = useReadOnly();
   const [preview, setPreview] = useState<string | null>(currentUrl);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +64,18 @@ export function CoverImageUpload({ tripId, currentUrl, onChanged }: CoverImageUp
     } catch {
       setError('Could not remove the photo. Please check your connection and try again.');
     }
+  }
+
+  if (readOnly) {
+    if (!preview) return null;
+    return (
+      <div className="space-y-1.5">
+        <span className="text-sm font-medium text-stone-700">Cover Photo</span>
+        <div className="w-full h-32 rounded-lg overflow-hidden border border-stone-200">
+          <img src={apiUrl(preview)} alt="Cover" className="w-full h-full object-cover" />
+        </div>
+      </div>
+    );
   }
 
   return (

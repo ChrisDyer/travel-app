@@ -21,6 +21,7 @@ import { statusColors, statusLabel, tripTiming, localToday } from '@/lib/trip-st
 import { toast } from '@/components/ui/toast';
 import { formatDateRange } from '@/lib/dates';
 import { apiUrl } from '@/lib/api';
+import { useReadOnly } from '@/lib/read-only';
 
 type SortKey = 'startDate-desc' | 'startDate-asc' | 'created-desc';
 
@@ -37,6 +38,7 @@ interface TripsClientProps {
 }
 
 export function TripsClient({ initialTrips }: TripsClientProps) {
+  const readOnly = useReadOnly();
   const [tripList, setTripList] = useState<Trip[]>(initialTrips);
   const [editing, setEditing] = useState<Trip | null>(null);
   const [duplicating, setDuplicating] = useState<string | null>(null);
@@ -121,9 +123,11 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
     return (
       <div className="text-center py-24 text-slate-400">
         <p className="text-lg">No trips yet.</p>
-        <Link href="/trips/new">
-          <Button variant="outline" className="mt-4">Plan your first trip</Button>
-        </Link>
+        {!readOnly && (
+          <Link href="/trips/new">
+            <Button variant="outline" className="mt-4">Plan your first trip</Button>
+          </Link>
+        )}
       </div>
     );
   }
@@ -217,50 +221,54 @@ export function TripsClient({ initialTrips }: TripsClientProps) {
                 </div>
               </Link>
 
-              <div className="no-print absolute top-2 right-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Trip actions"
-                        className="bg-white/80 backdrop-blur rounded-md"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      />
-                    }
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => handleDuplicate(trip)}
-                      disabled={duplicating === trip.id}
+              {!readOnly && (
+                <div className="no-print absolute top-2 right-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Trip actions"
+                          className="bg-white/80 backdrop-blur rounded-md"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        />
+                      }
                     >
-                      <Copy className="h-4 w-4" />
-                      Duplicate
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setEditing(trip)}>
-                      <Pencil className="h-4 w-4" />
-                      Edit trip
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(trip)}>
-                      <Trash2 className="h-4 w-4" />
-                      Delete trip
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => handleDuplicate(trip)}
+                        disabled={duplicating === trip.id}
+                      >
+                        <Copy className="h-4 w-4" />
+                        Duplicate
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setEditing(trip)}>
+                        <Pencil className="h-4 w-4" />
+                        Edit trip
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(trip)}>
+                        <Trash2 className="h-4 w-4" />
+                        Delete trip
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
             </div>
           ))}
 
-          <Link
-            href="/trips/new"
-            className="flex items-center justify-center rounded-xl border border-dashed border-slate-300 text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors min-h-36"
-          >
-            + New trip
-          </Link>
+          {!readOnly && (
+            <Link
+              href="/trips/new"
+              className="flex items-center justify-center rounded-xl border border-dashed border-slate-300 text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors min-h-36"
+            >
+              + New trip
+            </Link>
+          )}
         </div>
       )}
 
