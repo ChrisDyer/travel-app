@@ -97,7 +97,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
 NEXT_PUBLIC_APP_URL=https://travel.zo-bot.com
 DB_PATH=/home/chris/travel-app/local.db
 INTERNAL_API_TOKEN=
-ADMIN_EMAILS=chrissdyer@gmail.com
+ADMIN_EMAILS=chris.s.dyer@gmail.com
 ```
 
 > **`ADMIN_EMAILS`** — per-user read-only role (see `CLAUDE.md`). Comma-separated
