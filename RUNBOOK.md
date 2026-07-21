@@ -105,6 +105,15 @@ ADMIN_EMAILS=chrissdyer@gmail.com
 > controls). Unset/empty => everyone has full access (fail-open) — the app deploys
 > safely before this line is added.
 
+> **`ALLOW_NO_ACCESS_HEADER=1`** is set in production's `.env.local` today — the
+> `cf-access-authenticated-user-email` header defense-in-depth check in `src/proxy.ts`
+> is bypassed when it's missing. `ADMIN_EMAILS` still works correctly whenever the
+> header *is* present; when it's absent, the request is treated as admin (same
+> fail-open rule as an unset `ADMIN_EMAILS`), so this flag doesn't silently disable
+> the role feature — but it does mean the Access header isn't guaranteed to be
+> forwarded to this app in production, and read-only enforcement for a real user
+> depends on it being there.
+
 See `README.md` for how to obtain each value.
 
 > **`NEXT_PUBLIC_APP_URL` stays the legacy `travel.zo-bot.com` origin** — do not change
