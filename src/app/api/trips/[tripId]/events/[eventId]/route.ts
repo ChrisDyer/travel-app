@@ -20,7 +20,9 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: Para
     confirmationSource: 'confirmation_source', sourceEmailId: 'source_email_id',
     bookingUrl: 'booking_url', cost: 'cost', currency: 'currency', seatInfo: 'seat_info',
     vendor: 'vendor', orderNumber: 'order_number', cancellationPolicy: 'cancellation_policy',
-    cancellationDeadline: 'cancellation_deadline', sortOrder: 'sort_order', notes: 'notes',
+    cancellationDeadline: 'cancellation_deadline', hikeDistance: 'hike_distance',
+    hikeElevation: 'hike_elevation', trailheadLocation: 'trailhead_location',
+    alltrailsUrl: 'alltrails_url', sortOrder: 'sort_order', notes: 'notes',
   };
   const setClauses: string[] = ['updated_at = ?'];
   const values: unknown[] = [new Date().toISOString()];

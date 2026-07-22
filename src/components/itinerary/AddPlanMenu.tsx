@@ -8,20 +8,22 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { BookingKind } from './booking-selection';
-import { Plus, Plane, BedDouble, CarFront, SquareParking, TrainFront, CalendarPlus } from 'lucide-react';
+import type { EventCategory } from '@/types/travel';
+import { Plus, Plane, BedDouble, CarFront, SquareParking, TrainFront, CalendarPlus, Footprints } from 'lucide-react';
 import { useReadOnly } from '@/lib/read-only';
 
 interface AddPlanMenuProps {
-  onAdd: (kind: BookingKind) => void;
+  onAdd: (kind: BookingKind, defaultCategory?: EventCategory) => void;
 }
 
-const items: { kind: BookingKind; label: string; icon: React.ElementType }[] = [
+const items: { kind: BookingKind; label: string; icon: React.ElementType; defaultCategory?: EventCategory }[] = [
   { kind: 'flight', label: 'Flight', icon: Plane },
   { kind: 'hotel', label: 'Hotel', icon: BedDouble },
   { kind: 'rentalCar', label: 'Rental Car', icon: CarFront },
   { kind: 'parking', label: 'Parking', icon: SquareParking },
   { kind: 'transit', label: 'Transit', icon: TrainFront },
-  { kind: 'event', label: 'Activity', icon: CalendarPlus },
+  { kind: 'event', label: 'Activity', icon: CalendarPlus, defaultCategory: 'activity' },
+  { kind: 'event', label: 'Hike', icon: Footprints, defaultCategory: 'hike' },
 ];
 
 export function AddPlanMenu({ onAdd }: AddPlanMenuProps) {
@@ -40,8 +42,8 @@ export function AddPlanMenu({ onAdd }: AddPlanMenuProps) {
           }
         />
         <DropdownMenuContent>
-          {items.map(({ kind, label, icon: Icon }) => (
-            <DropdownMenuItem key={kind} onClick={() => onAdd(kind)}>
+          {items.map(({ kind, label, icon: Icon, defaultCategory }) => (
+            <DropdownMenuItem key={`${kind}-${label}`} onClick={() => onAdd(kind, defaultCategory)}>
               <Icon className="h-4 w-4" />
               {label}
             </DropdownMenuItem>

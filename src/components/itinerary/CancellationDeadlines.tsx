@@ -108,7 +108,7 @@ export function CancellationDeadlines({ hotels, events, flights, rentalCars, par
       key: `transit-${t.id}`, icon: '🚆', logoName: null,
       name: [t.operator, t.routeNumber].filter(Boolean).join(' '),
     })),
-    ...events.filter((e) => e.bookingStatus === 'unbooked' && e.category !== 'note').map((e) => ({
+    ...events.filter((e) => e.bookingStatus === 'unbooked' && e.category !== 'note' && e.category !== 'hike').map((e) => ({
       key: `event-${e.id}`, icon: '🎯', logoName: e.title, name: e.title,
     })),
   ];

@@ -218,7 +218,34 @@ const migrations = [
       );
     `,
   },
+  {
+    name: '004_hike_event_fields',
+    sql: `
+      ALTER TABLE trip_events ADD COLUMN hike_distance TEXT;
+      ALTER TABLE trip_events ADD COLUMN hike_elevation TEXT;
+      ALTER TABLE trip_events ADD COLUMN trailhead_location TEXT;
+      ALTER TABLE trip_events ADD COLUMN alltrails_url TEXT;
+    `,
+  },
 ];
+
+function addColumnIfMissing(db: Database.Database, table: string, column: string, definition: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!columns.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+function runCustomMigration(db: Database.Database, name: string): boolean {
+  if (name === '004_hike_event_fields') {
+    addColumnIfMissing(db, 'trip_events', 'hike_distance', 'TEXT');
+    addColumnIfMissing(db, 'trip_events', 'hike_elevation', 'TEXT');
+    addColumnIfMissing(db, 'trip_events', 'trailhead_location', 'TEXT');
+    addColumnIfMissing(db, 'trip_events', 'alltrails_url', 'TEXT');
+    return true;
+  }
+  return false;
+}
 
 export function runMigrations(db: Database.Database): void {
   db.exec(`
@@ -231,7 +258,9 @@ export function runMigrations(db: Database.Database): void {
   for (const migration of migrations) {
     const existing = db.prepare('SELECT name FROM schema_migrations WHERE name = ?').get(migration.name);
     if (!existing) {
-      db.exec(migration.sql);
+      if (!runCustomMigration(db, migration.name)) {
+        db.exec(migration.sql);
+      }
       db.prepare('INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)').run(
         migration.name,
         new Date().toISOString()

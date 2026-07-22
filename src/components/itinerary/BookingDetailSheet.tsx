@@ -32,7 +32,7 @@ const transitTypeIcon: Record<string, string> = {
 };
 
 const categoryIcons: Record<string, string> = {
-  flight: '✈', hotel: '🏨', restaurant: '🍽', activity: '🎯', transport: '🚗', parking: '🅿️', note: '📝',
+  flight: '✈', hotel: '🏨', restaurant: '🍽', activity: '🎯', hike: '🥾', transport: '🚗', parking: '🅿️', note: '📝',
 };
 
 function logoName(title: string): string {
@@ -309,14 +309,30 @@ export function BookingDetailSheet({
     const e = events.find((x) => x.id === selection.id);
     if (e) {
       itemFound = true;
-      icon = <BrandLogo name={logoName(e.title)} fallbackNames={[e.location, e.vendor]} fallback={categoryIcons[e.category] ?? '📌'} heightClass="h-5" />;
+      const isHike = e.category === 'hike';
+      const hikeLocation = e.trailheadLocation ?? e.location;
+      icon = <BrandLogo name={logoName(e.title)} fallbackNames={[hikeLocation, e.location, e.vendor]} fallback={categoryIcons[e.category] ?? '📌'} heightClass="h-5" />;
       title = e.title;
-      subtitle = e.location;
-      status = <BookingStatusBadge status={e.bookingStatus} />;
+      subtitle = isHike ? hikeLocation : e.location;
+      status = isHike ? null : <BookingStatusBadge status={e.bookingStatus} />;
       const day = days.find((d) => d.id === e.tripDayId);
       const dayCaption = day ? `Day ${day.dayNumber} · ${fmtShortDate(day.date)}` : null;
       const timeRange = [fmt12(e.startTime), fmt12(e.endTime)].filter(Boolean).join(' – ') || null;
-      sections = [
+      sections = isHike ? [
+        [
+          { label: 'Day', value: dayCaption },
+          { label: 'Time', value: timeRange },
+        ],
+        [
+          { label: 'Distance', value: e.hikeDistance },
+          { label: 'Elevation', value: e.hikeElevation },
+        ],
+        [
+          { label: 'Trailhead', value: addressValue(hikeLocation) },
+          { label: 'AllTrails', value: linkValue(e.alltrailsUrl, 'Open AllTrails ↗') },
+        ],
+        [{ label: 'Notes', value: notesValue(e.notes) }],
+      ] : [
         [
           { label: 'Day', value: dayCaption },
           { label: 'Time', value: timeRange },

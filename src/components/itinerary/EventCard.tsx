@@ -4,24 +4,25 @@ import { TripEvent } from '@/types/travel';
 import { BookingStatusBadge } from './BookingStatusBadge';
 import { BrandLogo } from './BrandLogo';
 import { getMapsUrl } from '@/lib/maps';
-import { MapPin } from 'lucide-react';
+import { ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { fmt12 } from '@/lib/dates';
 
 const categoryIcons: Record<string, string> = {
-  flight: '✈',
-  hotel: '🏨',
-  restaurant: '🍽',
-  activity: '🎯',
-  transport: '🚗',
-  parking: '🅿️',
-  note: '📝',
+  flight: 'F',
+  hotel: 'H',
+  restaurant: 'R',
+  activity: 'A',
+  hike: 'H',
+  transport: 'T',
+  parking: 'P',
+  note: 'N',
 };
 
 interface EventCardProps {
   event: TripEvent;
   onSelect: (event: TripEvent) => void;
-  onMoveUp?: () => void;    // provided only when the card can move up
-  onMoveDown?: () => void;  // provided only when the card can move down
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
 function logoName(title: string): string {
@@ -34,12 +35,15 @@ function logoName(title: string): string {
 }
 
 export function EventCard({ event, onSelect, onMoveUp, onMoveDown }: EventCardProps) {
+  const isHike = event.category === 'hike';
+  const displayLocation = isHike ? (event.trailheadLocation ?? event.location) : event.location;
+  const detailBits = isHike ? [event.hikeDistance, event.hikeElevation].filter(Boolean) : [];
+
   return (
     <div
       className="relative pl-8 group cursor-pointer"
       onClick={() => onSelect(event)}
     >
-      {/* Timeline dot */}
       <div className="absolute left-0 top-3 w-3 h-3 rounded-full bg-white border-2 border-stone-300 group-hover:border-stone-500 transition-colors" />
 
       <div className="bg-white rounded-lg border border-stone-200 p-4 hover:border-stone-300 hover:shadow-sm transition-all">
@@ -47,25 +51,28 @@ export function EventCard({ event, onSelect, onMoveUp, onMoveDown }: EventCardPr
           <div className="flex items-start gap-2 min-w-0">
             <BrandLogo
               name={logoName(event.title)}
-              fallbackNames={[event.location, event.vendor]}
-              fallback={categoryIcons[event.category] ?? '📌'}
+              fallbackNames={[displayLocation, event.vendor]}
+              fallback={categoryIcons[event.category] ?? 'P'}
               heightClass="h-5"
             />
             <div className="min-w-0">
               <p className="font-medium text-stone-900 truncate">{event.title}</p>
-              {event.location && (
+              {displayLocation && (
                 <div className="flex items-center gap-1 mt-0.5 min-w-0">
                   <p className="text-sm text-stone-500 truncate">
-                    {event.locationUrl ? (
+                    {!isHike && event.locationUrl ? (
                       <a href={event.locationUrl} target="_blank" rel="noopener noreferrer" className="hover:underline" onClick={(e) => e.stopPropagation()}>
-                        {event.location}
+                        {displayLocation}
                       </a>
-                    ) : event.location}
+                    ) : displayLocation}
                   </p>
-                  <a href={getMapsUrl(event.location)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="shrink-0">
+                  <a href={getMapsUrl(displayLocation)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="shrink-0">
                     <MapPin className="h-3.5 w-3.5 text-stone-400 hover:text-blue-500 transition-colors" />
                   </a>
                 </div>
+              )}
+              {detailBits.length > 0 && (
+                <p className="mt-1 text-xs text-stone-500">{detailBits.join(' / ')}</p>
               )}
             </div>
           </div>
@@ -73,18 +80,20 @@ export function EventCard({ event, onSelect, onMoveUp, onMoveDown }: EventCardPr
             {event.startTime && (
               <span className="text-sm font-semibold text-stone-700">{fmt12(event.startTime)}</span>
             )}
-            <div className="mt-auto">
-              <BookingStatusBadge status={event.bookingStatus} />
-            </div>
+            {!isHike && (
+              <div className="mt-auto">
+                <BookingStatusBadge status={event.bookingStatus} />
+              </div>
+            )}
           </div>
           {(onMoveUp || onMoveDown) && (
             <div className="no-print flex flex-col lg:opacity-0 lg:group-hover:opacity-100 max-lg:opacity-100 transition-opacity shrink-0">
               <button aria-label="Move up" disabled={!onMoveUp}
                 onClick={(e) => { e.stopPropagation(); onMoveUp?.(); }}
-                className="text-stone-300 hover:text-stone-600 disabled:opacity-30 leading-none text-xs px-1 max-lg:p-2 max-lg:text-sm">▲</button>
+                className="text-stone-300 hover:text-stone-600 disabled:opacity-30 leading-none p-1 max-lg:p-2"><ChevronUp className="h-3.5 w-3.5" /></button>
               <button aria-label="Move down" disabled={!onMoveDown}
                 onClick={(e) => { e.stopPropagation(); onMoveDown?.(); }}
-                className="text-stone-300 hover:text-stone-600 disabled:opacity-30 leading-none text-xs px-1 max-lg:p-2 max-lg:text-sm">▼</button>
+                className="text-stone-300 hover:text-stone-600 disabled:opacity-30 leading-none p-1 max-lg:p-2"><ChevronDown className="h-3.5 w-3.5" /></button>
             </div>
           )}
         </div>

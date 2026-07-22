@@ -41,8 +41,9 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
       INSERT INTO trip_events (id, trip_day_id, trip_id, category, title, start_time, end_time,
         location, location_url, booking_status, confirmation_number, confirmation_source,
         source_email_id, booking_url, cost, currency, seat_info, vendor, order_number,
-        cancellation_policy, cancellation_deadline, sort_order, notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unbooked', NULL, 'manual', NULL, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?)
+        cancellation_policy, cancellation_deadline, hike_distance, hike_elevation, trailhead_location, alltrails_url,
+        sort_order, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unbooked', NULL, 'manual', NULL, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     for (const e of events) {
       const newDayId = dayIdMap.get(e.trip_day_id as string);
@@ -50,6 +51,7 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
       insertEvent.run(
         crypto.randomUUID(), newDayId, newTripId, e.category, e.title, e.start_time, e.end_time,
         e.location, e.location_url, e.booking_url, e.cost, e.currency, e.seat_info, e.vendor,
+        e.hike_distance, e.hike_elevation, e.trailhead_location, e.alltrails_url,
         e.sort_order, e.notes, now, now
       );
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, PackingItem } from '@/types/travel';
+import { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, PackingItem, EventCategory } from '@/types/travel';
 import { BookingKind, BookingRef } from './booking-selection';
 import { AddPlanMenu } from './AddPlanMenu';
 import { BookingDetailSheet } from './BookingDetailSheet';
@@ -48,6 +48,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
   const [transit, setTransit] = useState<TripTransit[]>(initialTransit);
   const [editingEvent, setEditingEvent] = useState<TripEvent | null>(null);
   const [addingToDay, setAddingToDay] = useState<TripDay | null>(null);
+  const [addingEventCategory, setAddingEventCategory] = useState<EventCategory>('activity');
   const [editingFlight, setEditingFlight] = useState<TripFlight | null>(null);
   const [editingHotel, setEditingHotel] = useState<TripHotel | null>(null);
   const [editingParking, setEditingParking] = useState<TripParking | null>(null);
@@ -58,8 +59,9 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
   const [adding, setAdding] = useState<BookingKind | null>(null);
   const [mobileTab, setMobileTab] = useState<'itinerary' | 'bookings' | 'overview'>('itinerary');
 
-  function handleAdd(kind: BookingKind) {
+  function handleAdd(kind: BookingKind, defaultCategory: EventCategory = 'activity') {
     if (kind === 'event') {
+      setAddingEventCategory(defaultCategory);
       setAddingToDay(selectedDay ?? days[0]);
     } else {
       setAdding(kind);
@@ -331,7 +333,7 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
               dayTransit={transitForDay(day.date)}
               isSelected={selectedDay?.id === day.id}
               onSelectDay={(d) => setSelectedDay((prev) => prev?.id === d.id ? null : d)}
-              onAddEvent={setAddingToDay}
+              onAddEvent={(d) => { setAddingEventCategory('activity'); setAddingToDay(d); }}
               onSelectItem={(ref) => setSelection(ref)}
               onDayTitleChanged={handleDayTitleChanged}
               onDayNotesChanged={handleDayNotesChanged}
@@ -347,9 +349,10 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           day={addingToDay ?? (days.find((d) => d.id === editingEvent!.tripDayId) ?? days[0])}
           days={days}
           event={editingEvent}
+          defaultCategory={editingEvent?.category ?? addingEventCategory}
           onSaved={handleEventSaved}
           onDeleted={handleEventDeleted}
-          onClose={() => { setEditingEvent(null); setAddingToDay(null); }}
+          onClose={() => { setEditingEvent(null); setAddingToDay(null); setAddingEventCategory('activity'); }}
         />
       )}
 

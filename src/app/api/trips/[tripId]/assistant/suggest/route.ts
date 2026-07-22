@@ -30,7 +30,7 @@ const TOOLS: Anthropic.Tool[] = [
       type: 'object' as const,
       properties: {
         tripDayId: { type: 'string', description: 'The ID of the trip day to add this event to.' },
-        category: { type: 'string', enum: ['activity', 'restaurant', 'transport', 'note', 'hotel', 'flight', 'parking'], description: 'Event category.' },
+        category: { type: 'string', enum: ['activity', 'hike', 'restaurant', 'transport', 'note', 'hotel', 'flight', 'parking'], description: 'Event category.' },
         title: { type: 'string', description: 'Event name or title.' },
         startTime: { type: 'string', description: 'Start time in HH:MM format (24h).' },
         endTime: { type: 'string', description: 'End time in HH:MM format (24h).' },

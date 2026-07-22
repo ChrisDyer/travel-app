@@ -1,6 +1,6 @@
 export type TripStatus = 'planning' | 'confirmed' | 'in-progress' | 'completed';
 export type BookingStatus = 'unbooked' | 'pending' | 'confirmed';
-export type EventCategory = 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'parking' | 'note';
+export type EventCategory = 'flight' | 'hotel' | 'restaurant' | 'activity' | 'hike' | 'transport' | 'parking' | 'note';
 export type PackingCategory = 'Documents & Essentials' | 'Clothing' | 'Tech & Apps' | 'Health & Comfort';
 
 export interface Traveler {
@@ -60,6 +60,10 @@ export interface TripEvent {
   orderNumber: string | null;
   cancellationPolicy: string | null;
   cancellationDeadline: string | null;
+  hikeDistance: string | null;
+  hikeElevation: string | null;
+  trailheadLocation: string | null;
+  alltrailsUrl: string | null;
   sortOrder: number;
   notes: string | null;
   createdAt: Date | string;
