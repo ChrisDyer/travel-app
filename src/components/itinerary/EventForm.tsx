@@ -10,6 +10,7 @@ import { PlacesInput } from './PlacesInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { apiUrl } from '@/lib/api';
+import { bookingStatusLabel } from './BookingStatusBadge';
 
 interface EventFormProps {
   tripId: string;
@@ -38,7 +39,10 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
   const [error, setError] = useState('');
   const [selectedDayId, setSelectedDayId] = useState(day.id);
   const [selectedCategory, setSelectedCategory] = useState<EventCategory>(event?.category ?? defaultCategory);
+  const [takesReservations, setTakesReservations] = useState<boolean>(Boolean(event?.takesReservations ?? true));
   const isHike = selectedCategory === 'hike';
+  const isRestaurant = selectedCategory === 'restaurant';
+  const typeLabel = isHike ? 'Hike' : isRestaurant ? 'Restaurant' : 'Event';
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -55,20 +59,22 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
       endTime: form.get('endTime') || null,
       location: isHike ? trailheadLocation : form.get('location') || null,
       locationUrl: isHike ? null : form.get('locationUrl') || null,
-      bookingStatus: isHike ? 'unbooked' : form.get('bookingStatus'),
-      confirmationNumber: isHike ? null : form.get('confirmationNumber') || null,
-      bookingUrl: isHike ? null : form.get('bookingUrl') || null,
-      cost: isHike ? null : form.get('cost') ? Number(form.get('cost')) : null,
-      currency: isHike ? null : form.get('currency') || null,
-      seatInfo: isHike ? null : form.get('seatInfo') || null,
-      vendor: isHike ? null : form.get('vendor') || null,
-      orderNumber: isHike ? null : form.get('orderNumber') || null,
+      bookingStatus: isHike || (isRestaurant && !takesReservations) ? 'unbooked' : form.get('bookingStatus'),
+      confirmationNumber: isHike || (isRestaurant && !takesReservations) ? null : form.get('confirmationNumber') || null,
+      bookingUrl: isHike || isRestaurant ? null : form.get('bookingUrl') || null,
+      cost: isHike || isRestaurant ? null : form.get('cost') ? Number(form.get('cost')) : null,
+      currency: isHike || isRestaurant ? null : form.get('currency') || null,
+      seatInfo: isHike || isRestaurant ? null : form.get('seatInfo') || null,
+      vendor: isHike || isRestaurant ? null : form.get('vendor') || null,
+      orderNumber: isHike || isRestaurant ? null : form.get('orderNumber') || null,
       cancellationPolicy: isHike ? null : form.get('cancellationPolicy') || null,
       cancellationDeadline: isHike ? null : form.get('cancellationDeadline') || null,
       hikeDistance: isHike ? form.get('hikeDistance') || null : null,
       hikeElevation: isHike ? form.get('hikeElevation') || null : null,
       trailheadLocation: isHike ? trailheadLocation : null,
       alltrailsUrl: isHike ? form.get('alltrailsUrl') || null : null,
+      takesReservations: isRestaurant ? (takesReservations ? 1 : 0) : 1,
+      partySize: isRestaurant && form.get('partySize') ? Number(form.get('partySize')) : null,
       notes: form.get('notes') || null,
       sortOrder: event?.sortOrder ?? 0,
     };
@@ -111,7 +117,7 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isNew ? `Add ${isHike ? 'Hike' : 'Event'}` : `Edit ${isHike ? 'Hike' : 'Event'}`}</DialogTitle>
+          <DialogTitle>{isNew ? `Add ${typeLabel}` : `Edit ${typeLabel}`}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
@@ -127,20 +133,45 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
                 </SelectContent>
               </Select>
             </div>
-            {!isHike && (
+            {isRestaurant ? (
+              <div className="space-y-1.5">
+                <Label>Takes reservations?</Label>
+                <Select value={takesReservations ? 'yes' : 'no'} onValueChange={(v) => setTakesReservations(v === 'yes')}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Yes</SelectItem>
+                    <SelectItem value="no">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : !isHike ? (
               <div className="space-y-1.5">
                 <Label>Booking Status</Label>
                 <Select name="bookingStatus" defaultValue={event?.bookingStatus ?? 'unbooked'}>
-                  <SelectTrigger><SelectValue className="capitalize" /></SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {bookingStatuses.map((s) => (
-                      <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                      <SelectItem key={s} value={s}>{bookingStatusLabel[s]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
+            ) : null}
           </div>
+
+          {isRestaurant && takesReservations && (
+            <div className="space-y-1.5">
+              <Label>Booking Status</Label>
+              <Select name="bookingStatus" defaultValue={event?.bookingStatus ?? 'unbooked'}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {bookingStatuses.map((s) => (
+                    <SelectItem key={s} value={s}>{bookingStatusLabel[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {days.length > 1 && (
             <div className="space-y-1.5">
@@ -205,6 +236,42 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
               <div className="space-y-1.5">
                 <Label htmlFor="alltrailsUrl">AllTrails Link</Label>
                 <Input id="alltrailsUrl" name="alltrailsUrl" type="url" defaultValue={event?.alltrailsUrl ?? ''} placeholder="https://www.alltrails.com/" />
+              </div>
+            </>
+          ) : isRestaurant ? (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="location">Location</Label>
+                <PlacesInput id="location" name="location" defaultValue={event?.location ?? ''} placeholder="Restaurant name or address" />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="locationUrl">Website URL</Label>
+                <Input id="locationUrl" name="locationUrl" type="url" defaultValue={event?.locationUrl ?? ''} placeholder="https://" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="partySize">Party Size</Label>
+                  <Input id="partySize" name="partySize" type="number" min="1" step="1" defaultValue={event?.partySize ?? ''} placeholder="e.g. 4" />
+                </div>
+                {takesReservations && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirmationNumber">Reservation Reference</Label>
+                    <Input id="confirmationNumber" name="confirmationNumber" defaultValue={event?.confirmationNumber ?? ''} placeholder="Confirmation # or name" />
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cancellationPolicy">Cancellation Policy</Label>
+                  <Input id="cancellationPolicy" name="cancellationPolicy" defaultValue={event?.cancellationPolicy ?? ''} placeholder="e.g. Cancel 24h before, No-show fee" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cancellationDeadline">Cancel By</Label>
+                  <Input id="cancellationDeadline" name="cancellationDeadline" type="date" defaultValue={event?.cancellationDeadline ?? ''} />
+                </div>
               </div>
             </>
           ) : (
@@ -283,7 +350,7 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
                 <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>Delete</Button>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-red-600">Delete this {isHike ? 'hike' : 'event'}?</span>
+                  <span className="text-sm text-red-600">Delete this {typeLabel.toLowerCase()}?</span>
                   <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
                     {deleting ? 'Deleting...' : 'Yes, delete'}
                   </Button>
@@ -293,7 +360,7 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
             ) : <div />}
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-              <Button type="submit" disabled={loading}>{loading ? 'Saving...' : `Save ${isHike ? 'Hike' : 'Event'}`}</Button>
+              <Button type="submit" disabled={loading}>{loading ? 'Saving...' : `Save ${typeLabel}`}</Button>
             </div>
           </div>
         </form>

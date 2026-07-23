@@ -6,7 +6,7 @@ import { BookingRef, BookingKind } from './booking-selection';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { BrandLogo } from './BrandLogo';
-import { BookingStatusBadge } from './BookingStatusBadge';
+import { BookingStatusBadge, NoReservationsBadge } from './BookingStatusBadge';
 import { getMapsUrl } from '@/lib/maps';
 import { fmt12, fmtShortDate } from '@/lib/dates';
 import { toast } from '@/components/ui/toast';
@@ -310,11 +310,13 @@ export function BookingDetailSheet({
     if (e) {
       itemFound = true;
       const isHike = e.category === 'hike';
+      const isRestaurant = e.category === 'restaurant';
+      const noReservations = isRestaurant && !e.takesReservations;
       const hikeLocation = e.trailheadLocation ?? e.location;
       icon = <BrandLogo name={logoName(e.title)} fallbackNames={[hikeLocation, e.location, e.vendor]} fallback={categoryIcons[e.category] ?? '📌'} heightClass="h-5" />;
       title = e.title;
       subtitle = isHike ? hikeLocation : e.location;
-      status = isHike ? null : <BookingStatusBadge status={e.bookingStatus} />;
+      status = isHike ? null : noReservations ? <NoReservationsBadge /> : <BookingStatusBadge status={e.bookingStatus} />;
       const day = days.find((d) => d.id === e.tripDayId);
       const dayCaption = day ? `Day ${day.dayNumber} · ${fmtShortDate(day.date)}` : null;
       const timeRange = [fmt12(e.startTime), fmt12(e.endTime)].filter(Boolean).join(' – ') || null;
@@ -330,6 +332,24 @@ export function BookingDetailSheet({
         [
           { label: 'Trailhead', value: addressValue(hikeLocation) },
           { label: 'AllTrails', value: linkValue(e.alltrailsUrl, 'Open AllTrails ↗') },
+        ],
+        [{ label: 'Notes', value: notesValue(e.notes) }],
+      ] : isRestaurant ? [
+        [
+          { label: 'Day', value: dayCaption },
+          { label: 'Time', value: timeRange },
+        ],
+        [
+          { label: 'Location', value: addressValue(e.location) },
+          { label: 'Website', value: linkValue(e.locationUrl, 'Website ↗') },
+        ],
+        [
+          { label: 'Party size', value: e.partySize },
+          ...(noReservations ? [] : [{ label: 'Reservation', value: e.confirmationNumber }]),
+        ],
+        [
+          { label: 'Policy', value: e.cancellationPolicy },
+          { label: 'Deadline', value: fmtShortDate(e.cancellationDeadline) },
         ],
         [{ label: 'Notes', value: notesValue(e.notes) }],
       ] : [

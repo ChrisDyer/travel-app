@@ -1,7 +1,7 @@
 'use client';
 
 import { TripEvent } from '@/types/travel';
-import { BookingStatusBadge } from './BookingStatusBadge';
+import { BookingStatusBadge, NoReservationsBadge } from './BookingStatusBadge';
 import { BrandLogo } from './BrandLogo';
 import { getMapsUrl } from '@/lib/maps';
 import { ChevronDown, ChevronUp, MapPin } from 'lucide-react';
@@ -36,6 +36,8 @@ function logoName(title: string): string {
 
 export function EventCard({ event, onSelect, onMoveUp, onMoveDown }: EventCardProps) {
   const isHike = event.category === 'hike';
+  const isRestaurant = event.category === 'restaurant';
+  const noReservations = isRestaurant && !event.takesReservations;
   const displayLocation = isHike ? (event.trailheadLocation ?? event.location) : event.location;
   const detailBits = isHike ? [event.hikeDistance, event.hikeElevation].filter(Boolean) : [];
 
@@ -82,7 +84,7 @@ export function EventCard({ event, onSelect, onMoveUp, onMoveDown }: EventCardPr
             )}
             {!isHike && (
               <div className="mt-auto">
-                <BookingStatusBadge status={event.bookingStatus} />
+                {noReservations ? <NoReservationsBadge /> : <BookingStatusBadge status={event.bookingStatus} />}
               </div>
             )}
           </div>

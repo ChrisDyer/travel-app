@@ -22,10 +22,12 @@ interface KeyBookingsProps {
   onSelect: (ref: BookingRef) => void;
 }
 
+// Cards are intentionally neutral — booking status is conveyed by the status badge
+// alone, not by tinting the whole card.
 const statusBorder: Record<BookingStatus, string> = {
-  confirmed: 'border-emerald-200 bg-emerald-50',
-  pending:   'border-amber-200 bg-amber-50',
-  unbooked:  'border-stone-200 bg-stone-50',
+  confirmed: 'border-stone-200 bg-white',
+  pending:   'border-stone-200 bg-white',
+  unbooked:  'border-stone-200 bg-white',
 };
 
 function LegRow({ label, flightNum, date, depTime, arrTime }: {

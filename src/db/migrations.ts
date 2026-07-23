@@ -227,6 +227,13 @@ const migrations = [
       ALTER TABLE trip_events ADD COLUMN alltrails_url TEXT;
     `,
   },
+  {
+    name: '005_restaurant_event_fields',
+    sql: `
+      ALTER TABLE trip_events ADD COLUMN takes_reservations INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE trip_events ADD COLUMN party_size INTEGER;
+    `,
+  },
 ];
 
 function addColumnIfMissing(db: Database.Database, table: string, column: string, definition: string): void {
@@ -242,6 +249,11 @@ function runCustomMigration(db: Database.Database, name: string): boolean {
     addColumnIfMissing(db, 'trip_events', 'hike_elevation', 'TEXT');
     addColumnIfMissing(db, 'trip_events', 'trailhead_location', 'TEXT');
     addColumnIfMissing(db, 'trip_events', 'alltrails_url', 'TEXT');
+    return true;
+  }
+  if (name === '005_restaurant_event_fields') {
+    addColumnIfMissing(db, 'trip_events', 'takes_reservations', 'INTEGER NOT NULL DEFAULT 1');
+    addColumnIfMissing(db, 'trip_events', 'party_size', 'INTEGER');
     return true;
   }
   return false;

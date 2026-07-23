@@ -22,7 +22,8 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: Para
     vendor: 'vendor', orderNumber: 'order_number', cancellationPolicy: 'cancellation_policy',
     cancellationDeadline: 'cancellation_deadline', hikeDistance: 'hike_distance',
     hikeElevation: 'hike_elevation', trailheadLocation: 'trailhead_location',
-    alltrailsUrl: 'alltrails_url', sortOrder: 'sort_order', notes: 'notes',
+    alltrailsUrl: 'alltrails_url', takesReservations: 'takes_reservations',
+    partySize: 'party_size', sortOrder: 'sort_order', notes: 'notes',
   };
   const setClauses: string[] = ['updated_at = ?'];
   const values: unknown[] = [new Date().toISOString()];

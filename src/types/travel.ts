@@ -64,6 +64,8 @@ export interface TripEvent {
   hikeElevation: string | null;
   trailheadLocation: string | null;
   alltrailsUrl: string | null;
+  takesReservations: boolean;   // restaurant only; stored 0/1, treat as truthy
+  partySize: number | null;     // restaurant only
   sortOrder: number;
   notes: string | null;
   createdAt: Date | string;
