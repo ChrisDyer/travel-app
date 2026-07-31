@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { db, camelize, camelizeAll } from '@/db';
 import { getUserId } from '@/lib/auth';
-import type { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripRentalCar, TripParking, TripTransit, Proposal } from '@/types/travel';
+import { applyTravelWriteTools, writeToolUseToInput, type TravelWriteToolInput } from '@/lib/assistant/write-tools';
+import type { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripRentalCar, TripParking, TripTransit } from '@/types/travel';
 
 const anthropic = new Anthropic();
 
@@ -24,8 +25,8 @@ function aiRateLimitOk(): boolean {
 
 const TOOLS: Anthropic.Tool[] = [
   {
-    name: 'propose_event',
-    description: 'Propose adding an activity, restaurant, or other event to a specific day of the itinerary.',
+    name: 'add_event',
+    description: 'Add an activity, restaurant, or other event to a specific day of the itinerary.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -45,8 +46,8 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
-    name: 'propose_flight',
-    description: 'Propose adding a flight to the trip.',
+    name: 'add_flight',
+    description: 'Add a flight to the trip.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -69,8 +70,8 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
-    name: 'propose_hotel',
-    description: 'Propose adding a hotel stay to the trip.',
+    name: 'add_hotel',
+    description: 'Add a hotel stay to the trip.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -91,8 +92,8 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
-    name: 'propose_rental_car',
-    description: 'Propose adding a car rental to the trip.',
+    name: 'add_rental_car',
+    description: 'Add a car rental to the trip.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -114,8 +115,8 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
-    name: 'propose_parking',
-    description: 'Propose adding a parking reservation to the trip.',
+    name: 'add_parking',
+    description: 'Add a parking reservation to the trip.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -137,8 +138,8 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
-    name: 'propose_transit',
-    description: 'Propose adding a transit booking (train, bus, ferry, etc.) to the trip.',
+    name: 'add_transit',
+    description: 'Add a transit booking (train, bus, ferry, etc.) to the trip.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -220,7 +221,7 @@ function stripHtml(html: string): string {
 }
 
 function extractTextBody(payload: GmailBodyPart): string {
-  // Prefer text/plain — search recursively through the full MIME tree
+  // Prefer text/plain - search recursively through the full MIME tree
   const plain = findPart(payload, 'text/plain');
   if (plain) return decodeBase64(plain);
 
@@ -279,7 +280,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   const userId = getUserId(request);
 
   if (!aiRateLimitOk()) {
-    return NextResponse.json({ error: 'Rate limit exceeded — try again shortly.' }, { status: 429 });
+    return NextResponse.json({ error: 'Rate limit exceeded - try again shortly.' }, { status: 429 });
   }
 
   const tripRow = db.prepare('SELECT * FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId) as Record<string, unknown> | undefined;
@@ -308,7 +309,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   const transitItems = camelizeAll<Pick<TripTransit, 'operator' | 'departureDate'>>(transitRows);
 
   // Build context for Claude
-  const dayMap = days.map((d) => `  Day ${d.dayNumber} (${d.date}) — id: ${d.id}`).join('\n');
+  const dayMap = days.map((d) => `  Day ${d.dayNumber} (${d.date}) - id: ${d.id}`).join('\n');
   const existingEvents = events.map((e) => {
     const day = days.find((d) => d.id === e.tripDayId);
     return `  - ${e.title} (${e.category})${day ? ` on Day ${day.dayNumber}` : ''}`;
@@ -343,9 +344,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
     emailContent = result.emails;
   }
 
-  const systemPrompt = `You are a travel planning assistant helping to build an itinerary for "${trip.title}" — a trip to ${trip.destination} from ${trip.startDate} to ${trip.endDate}.
+  const systemPrompt = `You are a travel planning assistant helping to build an itinerary for "${trip.title}" - a trip to ${trip.destination} from ${trip.startDate} to ${trip.endDate}.
 
-Trip days and their IDs (use these IDs when calling propose_event):
+Trip days and their IDs (use these IDs when calling add_event):
 ${dayMap}
 
 What's already in the itinerary:
@@ -362,7 +363,7 @@ ${existingParking || '  (none yet)'}
 Transit:
 ${existingTransit || '  (none yet)'}
 
-Your role: analyse the information provided and call the proposal tools for anything worth adding. Briefly narrate what you found and why you're proposing each item. Don't propose things already in the itinerary.`;
+Your role: analyse the information provided and call the add tools for anything worth adding. These tools immediately add items to the itinerary, so only call them for concrete bookings or clearly useful additions. Briefly narrate what you found. Don't add things already in the itinerary.`;
 
   const userMessage = body.mode === 'email'
     ? `Here are recent travel-related emails. Extract any bookings or itinerary information relevant to this trip and propose them as additions:\n\n${emailContent || '(No travel emails found in the last 6 months.)'}`
@@ -393,27 +394,13 @@ Your role: analyse the information provided and call the proposal tools for anyt
 
         const finalMsg = await msgStream.finalMessage();
 
-        for (const block of finalMsg.content) {
-          if (block.type === 'tool_use') {
-            const input = block.input as Record<string, unknown>;
-            let proposal: Proposal | null = null;
+        const writeInputs = finalMsg.content
+          .filter((block) => block.type === 'tool_use')
+          .map((block) => writeToolUseToInput(block.name, block.input))
+          .filter((input): input is TravelWriteToolInput => input !== null);
 
-            if (block.name === 'propose_event') {
-              proposal = { type: 'event', ...input } as Proposal;
-            } else if (block.name === 'propose_flight') {
-              proposal = { type: 'flight', ...input } as Proposal;
-            } else if (block.name === 'propose_hotel') {
-              proposal = { type: 'hotel', ...input } as Proposal;
-            } else if (block.name === 'propose_rental_car') {
-              proposal = { type: 'rental_car', ...input } as Proposal;
-            } else if (block.name === 'propose_parking') {
-              proposal = { type: 'parking', ...input } as Proposal;
-            } else if (block.name === 'propose_transit') {
-              proposal = { type: 'transit', ...input } as Proposal;
-            }
-
-            if (proposal) send({ type: 'proposal', proposal });
-          }
+        if (writeInputs.length > 0) {
+          send({ type: 'write_result', result: applyTravelWriteTools(tripId, writeInputs) });
         }
 
         send({ type: 'done' });

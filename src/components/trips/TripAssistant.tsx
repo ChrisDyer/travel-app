@@ -29,6 +29,16 @@ interface HistoryTurn {
   content: string;
 }
 
+interface AssistantWriteResult {
+  addedEvents: TripEvent[];
+  addedFlights: TripFlight[];
+  addedHotels: TripHotel[];
+  addedRentalCars: TripRentalCar[];
+  addedParking: TripParking[];
+  addedTransit: TripTransit[];
+  skipped?: { type: string; reason: string }[];
+}
+
 export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onHotelsAdded, onRentalCarsAdded, onParkingAdded, onTransitAdded }: TripAssistantProps) {
   const readOnly = useReadOnly();
   const [open, setOpen] = useState(false);
@@ -48,6 +58,15 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
   const proposalsRef = useRef<Proposal[]>([]);
 
   const hasConversation = history.length > 0;
+
+  const applyWriteResult = useCallback((result: AssistantWriteResult) => {
+    if (result.addedEvents?.length) onEventsAdded(result.addedEvents);
+    if (result.addedFlights?.length) onFlightsAdded(result.addedFlights);
+    if (result.addedHotels?.length) onHotelsAdded(result.addedHotels);
+    if (result.addedRentalCars?.length) onRentalCarsAdded(result.addedRentalCars);
+    if (result.addedParking?.length) onParkingAdded(result.addedParking);
+    if (result.addedTransit?.length) onTransitAdded(result.addedTransit);
+  }, [onEventsAdded, onFlightsAdded, onHotelsAdded, onParkingAdded, onRentalCarsAdded, onTransitAdded]);
 
   const dayLabel = (dayId: string) => {
     const d = days.find((x) => x.id === dayId);
@@ -126,7 +145,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           try {
-            const event = JSON.parse(line.slice(6)) as { type: string; content?: string; proposal?: Proposal; message?: string };
+            const event = JSON.parse(line.slice(6)) as { type: string; content?: string; proposal?: Proposal; result?: AssistantWriteResult; message?: string };
             if (event.type === 'text' && event.content) {
               accumulatedRef.current += event.content;
               setText((prev) => prev + event.content);
@@ -138,6 +157,20 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
                 checked: true,
                 edits: {},
               }]);
+            } else if (event.type === 'write_result' && event.result) {
+              applyWriteResult(event.result);
+              const added = summarizeWriteResult(event.result);
+              if (added) {
+                const message = `\n\nAdded to itinerary: ${added}.`;
+                accumulatedRef.current += message;
+                setText((prev) => prev + message);
+              }
+              if (event.result.skipped?.length) {
+                const skipped = event.result.skipped.map((s) => `${s.type} (${s.reason})`).join(', ');
+                const message = `\n\nSkipped: ${skipped}.`;
+                accumulatedRef.current += message;
+                setText((prev) => prev + message);
+              }
             } else if (event.type === 'done') {
               // Commit this turn to history
               const proposalSummary = proposalsRef.current.length > 0
@@ -172,7 +205,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
       }
       setStreaming(false);
     }
-  }, [tripId]);
+  }, [applyWriteResult, tripId]);
 
   const startInitial = useCallback(() => {
     const msg = mode === 'email' ? '__email__' : (query || 'Suggest activities and experiences that would make this trip great.');
@@ -222,7 +255,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
     setCards((prev) => prev.map((c) => c.id === id ? { ...c, edits: { ...c.edits, [field]: value } } : c));
   };
 
-  // Writes itinerary data end-to-end — hide the entry point entirely for read-only users.
+  // Writes itinerary data end-to-end; hide the entry point entirely for read-only users.
   if (readOnly) return null;
 
   return (
@@ -231,7 +264,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 border border-stone-200 bg-white rounded-lg px-4 py-2 shadow-sm hover:shadow transition-all"
       >
-        <span className="text-base">✨</span>
+        <span className="text-base">*</span>
         {open ? 'Close Assistant' : 'Open Trip Assistant'}
       </button>
 
@@ -250,7 +283,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
               </button>
             </div>
           ) : (
-            /* Mode tabs — only shown before conversation starts */
+            /* Mode tabs - only shown before conversation starts */
             <div className="flex border-b border-stone-200">
               <button
                 className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${mode === 'email' ? 'bg-stone-50 text-stone-900 border-b-2 border-stone-900' : 'text-stone-500 hover:text-stone-700'}`}
@@ -282,7 +315,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
               </div>
             )}
 
-            {/* Conversation thread — past completed turns */}
+            {/* Conversation thread - past completed turns */}
             {history.length > 0 && (
               <div className="mb-4 space-y-3 max-h-64 overflow-y-auto">
                 {history.map((turn, i) => (
@@ -307,7 +340,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
               </div>
             )}
 
-            {/* Initial controls — only when no conversation yet */}
+            {/* Initial controls - only when no conversation yet */}
             {!hasConversation && (
               <>
                 {mode === 'brainstorm' && (
@@ -324,7 +357,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
                 )}
                 <div className="flex gap-2 mb-4">
                   <Button onClick={startInitial} disabled={streaming} size="sm">
-                    {streaming ? 'Thinking…' : mode === 'email' ? 'Scan Emails' : 'Get Suggestions'}
+                    {streaming ? 'Thinking...' : mode === 'email' ? 'Scan Emails' : 'Get Suggestions'}
                   </Button>
                   {streaming && (
                     <Button variant="outline" size="sm" onClick={() => { abortRef.current?.abort(); setStreaming(false); }}>
@@ -335,12 +368,12 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
               </>
             )}
 
-            {/* Follow-up input — shown once a conversation has started */}
+            {/* Follow-up input - shown once a conversation has started */}
             {hasConversation && (
               <div className="flex gap-2 mb-4">
                 <input
                   type="text"
-                  placeholder="Clarify or ask a follow-up…"
+                  placeholder="Clarify or ask a follow-up..."
                   value={followUpQuery}
                   onChange={(e) => setFollowUpQuery(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !streaming) sendFollowUp(); }}
@@ -349,7 +382,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
                   autoFocus
                 />
                 <Button onClick={sendFollowUp} disabled={streaming || !followUpQuery.trim()} size="sm">
-                  {streaming ? 'Thinking…' : 'Send'}
+                  {streaming ? 'Thinking...' : 'Send'}
                 </Button>
                 {streaming && (
                   <Button variant="outline" size="sm" onClick={() => { abortRef.current?.abort(); setStreaming(false); }}>
@@ -359,11 +392,11 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
               </div>
             )}
 
-            {/* Proposal cards — accumulate across all turns */}
+            {/* Proposal cards - accumulate across all turns */}
             {cards.length > 0 && (
               <div className="space-y-3">
                 <p className="text-sm font-medium text-stone-700">
-                  {cards.filter((c) => c.checked).length} of {cards.length} selected — review and edit before adding
+                  {cards.filter((c) => c.checked).length} of {cards.length} selected - review and edit before adding
                 </p>
 
                 {cards.map((card) => (
@@ -382,7 +415,7 @@ export function TripAssistant({ tripId, days, onEventsAdded, onFlightsAdded, onH
                     onClick={applySelected}
                     disabled={applying || cards.filter((c) => c.checked).length === 0}
                   >
-                    {applying ? 'Adding…' : `Add ${cards.filter((c) => c.checked).length} selected to itinerary`}
+                    {applying ? 'Adding...' : `Add ${cards.filter((c) => c.checked).length} selected to itinerary`}
                   </Button>
                 </div>
               </div>
@@ -401,9 +434,20 @@ interface ProposalCardUIProps {
   onEdit: (field: string, value: string) => void;
 }
 
+function summarizeWriteResult(result: AssistantWriteResult): string {
+  return [
+    ...result.addedEvents.map((item) => item.title),
+    ...result.addedFlights.map((item) => [item.airline, item.flightNumber].filter(Boolean).join(' ') || 'Flight'),
+    ...result.addedHotels.map((item) => item.name),
+    ...result.addedRentalCars.map((item) => item.company),
+    ...result.addedParking.map((item) => item.location),
+    ...result.addedTransit.map((item) => item.operator),
+  ].filter(Boolean).join(', ');
+}
+
 function ProposalCardUI({ card, dayLabel, onToggle, onEdit }: ProposalCardUIProps) {
   const p = { ...card.proposal, ...card.edits } as Proposal;
-  const typeLabels: Record<string, string> = { event: '📅 Event', flight: '✈️ Flight', hotel: '🏨 Hotel', rental_car: '🚗 Car Rental', parking: '🅿️ Parking', transit: '🚌 Transit' };
+  const typeLabels: Record<string, string> = { event: 'Event', flight: 'Flight', hotel: 'Hotel', rental_car: 'Car Rental', parking: 'Parking', transit: 'Transit' };
 
   return (
     <div className={`border rounded-lg p-4 transition-all ${card.checked ? 'border-stone-400 bg-white' : 'border-stone-200 bg-stone-50 opacity-60'}`}>
@@ -499,7 +543,7 @@ function SelectField({ label, value, field, options, onEdit }: { label: string; 
         onChange={(e) => onEdit(field, e.target.value)}
         className="flex-1 border-b border-stone-200 focus:border-stone-400 focus:outline-none px-1 py-0.5 text-stone-800 bg-transparent text-sm"
       >
-        <option value="">—</option>
+        <option value="">-</option>
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
     </div>
