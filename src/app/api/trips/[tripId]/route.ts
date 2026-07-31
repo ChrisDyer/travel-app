@@ -22,7 +22,11 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: { pa
     .get(tripId, userId) as { start_date: string; end_date: string } | undefined;
   if (!before) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Build SET clause dynamically from body keys
+  // Build SET clause dynamically from body keys.
+  // planningNotes and its bookkeeping columns are deliberately absent. The brief is written
+  // only via /api/trips/{tripId}/brief, which snapshots the previous value and derives the
+  // author from x-internal-token. A second write path here would bypass both and make the
+  // Undo button lie. See docs/trip-brief/00-overview.md.
   const colMap: Record<string, string> = {
     title: 'title', destination: 'destination', startDate: 'start_date', endDate: 'end_date',
     status: 'status', coverImageUrl: 'cover_image_url', travelers: 'travelers', notes: 'notes',

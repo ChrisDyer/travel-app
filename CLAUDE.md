@@ -28,3 +28,9 @@ New multi-phase plans go under `docs/<slug>/` (see `docs/redesign`, `docs/fixes`
 `docs/calendar-sync`) with a `PROGRESS.md` per the convention in the root `CLAUDE.md`.
 Register the folder in the root `projects.config.json` (path + `totalPhases`) and run
 `node tools/project-status.mjs` from the repo root.
+
+## Downstream MCP write registry
+
+`mcp-server/travel-write.js` mirrors the writable `colMap` field lists in
+`src/app/api/trips/**`. When a migration or route change adds a writable column, update
+that registry too, or Claude's travel write tools will reject the new field as unknown.

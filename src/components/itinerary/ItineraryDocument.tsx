@@ -10,6 +10,7 @@ import { EventForm } from './EventForm';
 import { KeyBookings } from './KeyBookings';
 import { TripMap, MapLocation } from './TripMap';
 import { CancellationDeadlines } from './CancellationDeadlines';
+import { TripBrief } from './TripBrief';
 import { FlightForm } from './FlightForm';
 import { HotelForm } from './HotelForm';
 import { ParkingForm } from './ParkingForm';
@@ -293,6 +294,14 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
               rentalCars={rentalCars}
               parking={parking}
               transit={transit}
+            />
+
+            <TripBrief
+              tripId={trip.id}
+              initialContent={trip.planningNotes}
+              initialUpdatedAt={trip.planningNotesUpdatedAt}
+              initialUpdatedBy={trip.planningNotesUpdatedBy}
+              initialHasUndo={trip.planningNotesPrevious !== null}
             />
 
             <TripCostSummary

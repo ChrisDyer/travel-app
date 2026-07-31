@@ -47,3 +47,25 @@ export function formatDateRange(start: string, end: string, style: 'short' | 'lo
   const monthFormat = style === 'long' ? 'long' : 'short';
   return `${s.toLocaleDateString('en-US', { month: monthFormat, day: 'numeric' })} – ${e.toLocaleDateString('en-US', { month: monthFormat, day: 'numeric', year: 'numeric' })}`;
 }
+
+/** Full ISO timestamp to 'just now' | '5m ago' | '2h ago' | '3d ago' | 'Aug 8'.
+ *  This helper is for real timestamps, not date-only values, so plain `new Date(iso)`
+ *  is correct and the noon-UTC anchoring rule above does not apply. */
+export function formatRelativeTime(iso: string): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return '';
+
+  const diffMs = Date.now() - then.getTime();
+  if (diffMs < 60_000) return 'just now';
+
+  const diffMinutes = Math.floor(diffMs / 60_000);
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays <= 7) return `${diffDays}d ago`;
+
+  return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}

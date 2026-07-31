@@ -25,6 +25,10 @@ export interface Trip {
   digestDayOfWeek: number;
   budget: number | null;
   budgetCurrency: string | null;
+  planningNotes: string | null;
+  planningNotesPrevious: string | null;
+  planningNotesUpdatedAt: string | null;
+  planningNotesUpdatedBy: 'you' | 'assistant' | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }

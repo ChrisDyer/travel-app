@@ -19,10 +19,10 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
       INSERT INTO trips (id, user_id, title, destination, start_date, end_date, status,
                          cover_image_url, travelers, notes, travel_mode, rental_car_needed,
                          digest_enabled, digest_day_of_week, budget, budget_currency,
-                         created_at, updated_at)
+                         planning_notes, created_at, updated_at)
       SELECT ?, user_id, title || ' (Copy)', destination, start_date, end_date, 'planning',
              cover_image_url, travelers, notes, travel_mode, rental_car_needed,
-             0, digest_day_of_week, budget, budget_currency, ?, ?
+             0, digest_day_of_week, budget, budget_currency, planning_notes, ?, ?
       FROM trips WHERE id = ?
     `).run(newTripId, now, now, tripId);
 
