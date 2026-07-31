@@ -1,6 +1,6 @@
 # Trip Brief — Progress
 
-> **Status: Phases 1-3 complete. Phase 4 (deploy + docs) is next — nothing from this program is deployed yet.**
+> **Status: Deployed to production and verified end-to-end over MCP. Phase 4 stays open until the claude.ai acceptance test is run.**
 > Append one report per completed phase (format below). Never rewrite an earlier
 > phase report; later corrections are new dated entries.
 
@@ -51,3 +51,39 @@ Report format (copy the skeleton):
 **Known gaps / follow-ups:** None.
 **Verification evidence:** `npx tsc --noEmit` clean; `npm run lint` 0 errors / 11 pre-existing warnings. Live against the dev server: `PUT {"content":"Audit scratch brief"}` then `PUT {"content":""}` returned `content: null, hasUndo: true`, and the server-rendered trip page then contained both `No brief yet.` and the Undo control's `Restore the previous trip brief version` title. `POST /brief/undo` returned the text. The test trip's four `planning_notes*` columns were reset to `NULL` afterwards.
 
+
+## Phase 4 - Deploy and docs - 2026-07-31
+
+**Status:** in progress - deployed and verified in production; the claude.ai acceptance test is outstanding and only Chris can run it
+**What was built/done:** Chris ran the pre-deploy backup (`~/travel-app/local.db` ->
+`~/travel-app/backups/pre-trip-brief-2026-07-31.db`), then `Deploy-Mcp` and `Deploy-Travel`.
+Docs brought in line with the deployed reality: a "Trip brief" section in
+`travel-app/CLAUDE.md` (columns, the single write path and both deliberate exclusions,
+server-derived authorship, the self-inverting undo, the `trips.updated_at` trap), a rewritten
+travel tool inventory in `mcp-server/CLAUDE.md` (14/22 full-scope counts, the ungated read
+tool, the `instructions` string, the `travel_update_packing` confirm contract), and a
+`## Trip Brief` checklist in `travel-app/TESTING.md`.
+**Deviations from spec (and why):** Deploy order was inverted - `Deploy-Mcp` ran first, so for
+about three minutes production advertised both brief tools while travel-app still 404'd them.
+Confirmed harmless in hindsight (reads and the seven write tools were unaffected, and no brief
+call was made in the window), but it is the exact failure `04-deploy-and-docs.md` warns about.
+The doc's pre-deploy backup path was wrong (`~/travel-app/data/travel.db`); corrected to
+`~/travel-app/local.db` per `RUNBOOK.md:98` in commit `88fc7cf`.
+**Known gaps / follow-ups:** **The acceptance test has not been run.** State constraints to
+Claude in a fresh claude.ai conversation, confirm `travel_update_trip_brief` fires unprompted,
+then open a brand new conversation and check the constraints are honoured without being
+repeated. That, plus the site-side Undo check and the read-only check, is what remains before
+this phase can be marked complete. Browser-based UI verification (steps 5, 8, 11, 12) is also
+still outstanding for the same reason it was in Phases 2 and 3 - no browser session available.
+**Verification evidence:** VPS `travel-app` at `88fc7cf`, `mcp-server` at `2657d44`, both
+`online` in PM2. Migration applied: `schema_migrations` contains `006_trip_brief` and
+`PRAGMA table_info(trips)` shows all four `planning_notes*` columns. `GET
+/api/trips/{id}/brief` on production returned `{"content":null,...,"hasUndo":false}` (it 404'd
+before the travel-app deploy, which is how the ordering window was confirmed); the trip page
+returned 200. Production `tools/list`: full scope 22 tools including both brief tools,
+genealogy scope exactly 7 with zero non-`genealogy_*` tools. Health 200, unauthenticated
+`/mcp` 401. `initialize` carried the `instructions` string. End-to-end write over production
+MCP on trip `dad00455` (Atlanta, July 2026): `travel_update_trip_brief` returned
+`updatedBy: "assistant"`, travel-app then served that content over its own API, and
+`get_trip_details` carried the matching top-level `brief` key. The trip's four `planning_notes*`
+columns were reset to `NULL` afterwards and re-read as `(None, None, None, None)`.

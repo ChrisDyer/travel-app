@@ -22,6 +22,33 @@ needed — this app has no client-side auth fetch, everything comes from server
 components reading `headers()`. See `docs/plans/2026-07-per-user-read-only/04-travel.md`
 (Phase 4 of the cross-app program) for the full design.
 
+## Trip brief
+
+A free-text planning memory per trip: the traveller's stated goals, must-dos, constraints,
+open questions and rejected ideas — the intent behind an itinerary, which the itinerary
+itself does not record. Four columns on `trips` (migration `006_trip_brief`):
+`planning_notes` (the brief; `NULL` when unset, never `''`), `planning_notes_previous`
+(the value displaced by the most recent write), `planning_notes_updated_at`,
+`planning_notes_updated_by` (`'you'` or `'assistant'`).
+
+- **One write path.** `planningNotes` is deliberately **absent** from the `colMap` in
+  `src/app/api/trips/[tripId]/route.ts`, and from `TRIP_FIELDS` in
+  `mcp-server/travel-write.js`. The brief is writable only through
+  `PUT /api/trips/{tripId}/brief`. A second write path would bypass the snapshot and the
+  attribution, and the Undo button would then lie. Both exclusions carry comments saying so.
+- **Authorship is server-derived**, never from the request body: a request whose
+  `x-internal-token` matches `INTERNAL_API_TOKEN` is `'assistant'`, everything else is
+  `'you'`. A client cannot claim to be Claude.
+- **Undo is a self-inverting swap**, one level deep. Every write snapshots the outgoing
+  content into `planning_notes_previous` in the same `UPDATE`; undo swaps the two columns,
+  so undoing twice returns you to where you started and a mis-clicked undo costs nothing.
+  Do not "improve" this by clearing `previous`.
+- The panel never bumps `trips.updated_at` — `src/app/trips/[tripId]/page.tsx` passes it as
+  `key` to `<ItineraryDocument>`, so bumping it would remount the whole client tree.
+- Claude reaches it over MCP through `travel_get_trip_brief` / `travel_update_trip_brief`.
+
+Full design in `docs/trip-brief/`.
+
 ## Plan folders
 
 New multi-phase plans go under `docs/<slug>/` (see `docs/redesign`, `docs/fixes`,

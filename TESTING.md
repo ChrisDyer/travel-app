@@ -188,6 +188,30 @@ Manual test cases for the travel itinerary app before going live.
 
 ---
 
+## Trip Brief
+
+- [ ] Trip with no brief → empty state and an "Add brief" button in the overview column
+- [ ] Add a short brief → saves, no "Show more" toggle
+- [ ] Add a 20+ line brief → collapses to 3 lines, "Show more" expands, "Show less" collapses
+- [ ] Hard-reload → content persists
+- [ ] Edit then Cancel → change discarded, original text intact
+- [ ] Edit then Escape → same
+- [ ] Clear the whole brief and Save → empty state, **and Undo is still offered**
+- [ ] Undo → previous text returns; Undo again → the newer text comes back (self-inverting)
+- [ ] `<script>alert(1)</script>` and emoji render literally and safely
+- [ ] Attribution reads "Updated by you · just now" after a site edit
+- [ ] Write over MCP (or `curl -H "x-internal-token: $INTERNAL_API_TOKEN"`) → "Updated by Claude"
+- [ ] `PUT` with a stale `expectedUpdatedAt` → 409, brief unchanged afterwards
+- [ ] `PUT` with `mode: "append"` → appended after a blank line; on an empty brief it replaces
+- [ ] `PUT` with 25,000 chars → 400, brief unchanged
+- [ ] Narrow to <1024px → brief appears under the Overview tab only, not Itinerary or Bookings
+- [ ] Cmd-P and `/trips/{id}/print` → the brief does **not** appear
+- [ ] Read-only user → brief text readable, Edit / Add brief / Undo hidden
+- [ ] Read-only user, direct `PUT` to the brief route → 403 `read_only`
+- [ ] Duplicate a trip → the copy inherits the brief text but has no undo history
+
+---
+
 ## Form Error Handling
 
 - [ ] Submit any form with server returning 500 → error message shown above buttons
