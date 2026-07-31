@@ -27,12 +27,13 @@ data. Nightly backups exist in `~/travel-app/backups/` (cron 02:10) and on OneDr
 
 ```
 ssh chris@91.99.230.234
-cp ~/travel-app/data/travel.db ~/travel-app/backups/pre-trip-brief-$(date +%F).db
+cp ~/travel-app/local.db ~/travel-app/backups/pre-trip-brief-$(date +%F).db
 ```
 
-Confirm the actual `DB_PATH` from `travel-app/RUNBOOK.md` rather than assuming — the Next.js
-standalone build's `process.chdir` makes `DB_PATH` mandatory and it is not the repo-root
-`local.db`.
+The path is confirmed against `travel-app/RUNBOOK.md:98` (`DB_PATH=/home/chris/travel-app/local.db`)
+and the nightly backup cron at `RUNBOOK.md:319`, which copies the same file. The Next.js
+standalone build's `process.chdir` makes `DB_PATH` mandatory, so re-confirm it with
+`pm2 env travel-app` if the RUNBOOK and reality ever disagree.
 
 **Confirm `TRAVEL_WRITE=1`** is already set in the VPS `~/mcp-server/.env` from the
 write-tools program:
