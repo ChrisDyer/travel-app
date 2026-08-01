@@ -68,7 +68,10 @@ export interface TripEvent {
   hikeElevation: string | null;
   trailheadLocation: string | null;
   alltrailsUrl: string | null;
-  takesReservations: boolean;   // restaurant only; stored 0/1, treat as truthy
+  // "Does this need booking?" — restaurants that take reservations, activities you must
+  // book ahead. 0 for a walk-in restaurant or a walk-up activity. Stored 0/1, treat as
+  // truthy; always 1 for other categories. See src/lib/bookings.ts.
+  takesReservations: boolean;
   partySize: number | null;     // restaurant only
   sortOrder: number;
   notes: string | null;
@@ -224,6 +227,7 @@ export interface ProposedEvent {
   confirmationNumber?: string | null;
   cost?: number | null;
   currency?: string | null;
+  takesReservations?: boolean | null;
 }
 
 export interface ProposedFlight {

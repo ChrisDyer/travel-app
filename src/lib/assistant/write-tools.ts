@@ -23,6 +23,17 @@ const optionalNumber = z.preprocess(
   (value) => value === '' || value == null ? null : Number(value),
   z.number().finite().nonnegative().nullable().optional()
 );
+// Model tool calls send real booleans; the proposal editor sends yes/no strings.
+const optionalBoolean = z.preprocess((value) => {
+  if (value === '' || value == null) return null;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const v = value.trim().toLowerCase();
+    if (v === 'yes' || v === 'true' || v === '1') return true;
+    if (v === 'no' || v === 'false' || v === '0') return false;
+  }
+  return value;
+}, z.boolean().nullable().optional());
 
 const eventInputSchema = z.object({
   type: z.literal('event'),
@@ -49,7 +60,8 @@ const eventInputSchema = z.object({
   hikeElevation: optionalText,
   trailheadLocation: optionalText,
   alltrailsUrl: optionalText,
-  takesReservations: z.boolean().nullable().optional(),
+  // "Does this need booking?" — false for a walk-in restaurant or a walk-up activity.
+  takesReservations: optionalBoolean,
   partySize: optionalNumber,
 });
 
@@ -227,6 +239,10 @@ export function applyTravelWriteTools(tripId: string, inputs: unknown[]): Travel
         result.skipped.push({ type: 'event', reason: 'already on that day' });
         continue;
       }
+      // A walk-in restaurant or walk-up activity has nothing to book: don't let a
+      // proposal leave it carrying a booking status or a confirmation number.
+      const skipsBooking = input.takesReservations === false
+        && (input.category === 'restaurant' || input.category === 'activity');
       const id = crypto.randomUUID();
       const row = db.prepare(`
         INSERT INTO trip_events (
@@ -240,7 +256,8 @@ export function applyTravelWriteTools(tripId: string, inputs: unknown[]): Travel
       `).get(
         id, input.tripDayId, tripId, input.category, input.title,
         input.startTime ?? null, input.endTime ?? null, input.location ?? null, input.locationUrl ?? null,
-        input.bookingStatus ?? 'unbooked', input.confirmationNumber ?? null,
+        skipsBooking ? 'unbooked' : (input.bookingStatus ?? 'unbooked'),
+        skipsBooking ? null : (input.confirmationNumber ?? null),
         'gmail', input.sourceEmailId ?? null, input.bookingUrl ?? null,
         input.cost ?? null, input.currency ?? null, input.seatInfo ?? null, input.vendor ?? null,
         input.orderNumber ?? null, input.cancellationPolicy ?? null, input.cancellationDeadline ?? null,

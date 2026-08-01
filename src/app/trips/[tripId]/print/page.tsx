@@ -4,6 +4,7 @@ import { getServerUserId } from '@/lib/auth';
 import { TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, BookingStatus, PackingCategory, PackingItem } from '@/types/travel';
 import { PrintTrigger } from './PrintTrigger';
 import { fmt12, formatDateRange } from '@/lib/dates';
+import { noBookingLabel, skipsBooking } from '@/lib/bookings';
 
 const eventIcons: Record<string, string> = {
   flight: '✈', hotel: '🏨', restaurant: '🍽', activity: '🎯', transport: '🚗', parking: '🅿️', note: '📝',
@@ -254,7 +255,12 @@ export default async function PrintPage({ params }: { params: Promise<{ tripId: 
                         </div>
                         <div className="text-right shrink-0">
                           {event.startTime && <p className="text-sm font-mono text-stone-500">{fmt12(event.startTime)}</p>}
-                          <p className="text-xs mt-1">{statusLabels[event.bookingStatus as BookingStatus]}</p>
+                          {/* Hikes carry no booking status; walk-ins and walk-ups say so instead. */}
+                          {event.category !== 'hike' && (
+                            <p className="text-xs mt-1">
+                              {skipsBooking(event) ? noBookingLabel(event.category) : statusLabels[event.bookingStatus as BookingStatus]}
+                            </p>
+                          )}
                           {event.cost != null && <p className="text-xs text-stone-400">{event.currency ?? 'USD'} {Number(event.cost).toFixed(2)}</p>}
                         </div>
                       </div>

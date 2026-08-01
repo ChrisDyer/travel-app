@@ -53,6 +53,20 @@ Manual test cases for the travel itinerary app before going live.
 - [ ] Events without start time sorted by sortOrder, appear below timed events
 - [ ] Submit event form with simulated server error → error message shown, not silent failure
 
+### Plans that need no booking
+
+- [ ] Add activity with "Needs booking? = No" → booking status, confirmation #, booking URL,
+      seats, vendor/order # and cancellation fields all disappear from the form
+- [ ] Same activity on the itinerary → grey "No booking needed" badge, not red "Needs Booking"
+- [ ] Same activity in the detail sheet → no empty confirmation/vendor/cancellation rows
+- [ ] Same activity is absent from the "Needs Booking" list above the itinerary
+- [ ] Restaurant with "Takes reservations? = No" → grey "No reservations" badge (unchanged)
+- [ ] Flip a booked activity to "Needs booking? = No" → status resets to unbooked, confirmation cleared
+- [ ] Flip it back to Yes → booking fields reappear, status editable again
+- [ ] Print view: walk-up activity shows "No booking needed", hike shows no status at all
+- [ ] Trip Assistant proposes a walking tour with takesReservations=false → proposal card shows
+      "Needs booking: no" and no status/confirmation fields; applying it saves it unbooked
+
 ---
 
 ## Flights

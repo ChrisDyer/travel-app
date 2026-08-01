@@ -38,7 +38,11 @@ const TOOLS: Anthropic.Tool[] = [
         location: { type: 'string', description: 'Address or place name.' },
         notes: { type: 'string', description: 'Any additional notes.' },
         confirmationNumber: { type: 'string', description: 'Booking confirmation number if available.' },
-        bookingStatus: { type: 'string', enum: ['unbooked', 'pending', 'confirmed'], description: 'Booking status.' },
+        bookingStatus: { type: 'string', enum: ['unbooked', 'pending', 'confirmed'], description: 'Booking status. Ignored when takesReservations is false.' },
+        takesReservations: {
+          type: 'boolean',
+          description: 'Whether this needs booking ahead. Restaurants and activities only. Set false for walk-ins and walk-up activities that need no ticket or reservation — a stroll through a park, a self-guided walking tour, browsing a market. Defaults to true.',
+        },
         cost: { type: 'number', description: 'Cost amount.' },
         currency: { type: 'string', description: 'Currency code, e.g. USD.' },
       },

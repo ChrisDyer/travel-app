@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import type { TripDay, TripEvent, TripFlight, TripHotel, TripRentalCar, TripParking, TripTransit, Proposal, ProposedEvent, ProposedFlight, ProposedHotel, ProposedRentalCar, ProposedParking, ProposedTransit } from '@/types/travel';
 import { apiUrl } from '@/lib/api';
+import { bookingIsOptional } from '@/lib/bookings';
 import { useReadOnly } from '@/lib/read-only';
 
 interface TripAssistantProps {
@@ -551,9 +552,13 @@ function SelectField({ label, value, field, options, onEdit }: { label: string; 
 }
 
 const BOOKING_STATUS_OPTIONS = ['unbooked', 'pending', 'confirmed'];
+const YES_NO_OPTIONS = ['yes', 'no'];
 const TRANSIT_TYPE_OPTIONS = ['train', 'bus', 'ferry', 'subway', 'shuttle', 'taxi', 'rideshare', 'other'];
 
 function EventProposalFields({ p, dayLabel, onEdit }: { p: ProposedEvent; dayLabel: (id: string) => string; onEdit: (f: string, v: string) => void }) {
+  // Restaurants and activities may need no booking at all — a walk-in, a walking tour.
+  const bookingOptional = bookingIsOptional(p.category);
+  const needsBooking = p.takesReservations === false || String(p.takesReservations) === 'no' ? 'no' : 'yes';
   return (
     <>
       <Field label="Title" value={p.title} field="title" onEdit={onEdit} />
@@ -565,9 +570,16 @@ function EventProposalFields({ p, dayLabel, onEdit }: { p: ProposedEvent; dayLab
       <TimeField label="Start" value={p.startTime ?? null} field="startTime" onEdit={onEdit} />
       <TimeField label="End" value={p.endTime ?? null} field="endTime" onEdit={onEdit} />
       <Field label="Location" value={p.location ?? null} field="location" onEdit={onEdit} />
-      <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
+      {bookingOptional && (
+        <SelectField label="Needs booking" value={needsBooking} field="takesReservations" options={YES_NO_OPTIONS} onEdit={onEdit} />
+      )}
+      {!(bookingOptional && needsBooking === 'no') && (
+        <>
+          <Field label="Conf #" value={p.confirmationNumber ?? null} field="confirmationNumber" onEdit={onEdit} />
+          <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
+        </>
+      )}
       <Field label="Notes" value={p.notes ?? null} field="notes" onEdit={onEdit} />
-      <SelectField label="Status" value={p.bookingStatus} field="bookingStatus" options={BOOKING_STATUS_OPTIONS} onEdit={onEdit} />
       <NumberField label="Cost" value={p.cost != null ? String(p.cost) : null} field="cost" onEdit={onEdit} />
       <Field label="Currency" value={p.currency ?? null} field="currency" onEdit={onEdit} />
     </>

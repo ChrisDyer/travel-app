@@ -2,6 +2,7 @@
 
 import { TripHotel, TripEvent, TripFlight, TripRentalCar, TripParking, TripTransit } from '@/types/travel';
 import { BrandLogo } from './BrandLogo';
+import { skipsBooking } from '@/lib/bookings';
 
 interface CancellationDeadlinesProps {
   hotels: TripHotel[];
@@ -109,7 +110,7 @@ export function CancellationDeadlines({ hotels, events, flights, rentalCars, par
       name: [t.operator, t.routeNumber].filter(Boolean).join(' '),
     })),
     ...events.filter((e) => e.bookingStatus === 'unbooked' && e.category !== 'note' && e.category !== 'hike'
-        && !(e.category === 'restaurant' && !e.takesReservations)).map((e) => ({
+        && !skipsBooking(e)).map((e) => ({
       key: `event-${e.id}`, icon: '🎯', logoName: e.title, name: e.title,
     })),
   ];

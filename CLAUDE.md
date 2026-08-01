@@ -22,6 +22,22 @@ needed — this app has no client-side auth fetch, everything comes from server
 components reading `headers()`. See `docs/plans/2026-07-per-user-read-only/04-travel.md`
 (Phase 4 of the cross-app program) for the full design.
 
+## Plans that need no booking
+
+Not every plan is bookable: a restaurant may not take reservations, an activity may be a
+walk-up (a stroll, a self-guided walking tour). Both share one column —
+`trip_events.takes_reservations` (`1` = needs booking, the default; migration
+`005_restaurant_event_fields`). The name predates the activity case; read it as
+**"does this need booking?"**. Helpers live in `src/lib/bookings.ts` — `bookingIsOptional()`
+for the categories that offer the toggle (restaurant, activity), `skipsBooking()` for
+"this plan needs nothing booked", `noBookingLabel()` for the wording ("No reservations"
+vs "No booking needed"). Use them rather than re-testing the column inline.
+
+When the flag is off the event carries no booking status: the form hides those fields and
+nulls them on save, the card and detail sheet show a grey badge instead of the red "Needs
+Booking" one, and `CancellationDeadlines` leaves it out of the "Needs Booking" list.
+Hikes are separate — they never have a booking status at all.
+
 ## Trip brief
 
 A free-text planning memory per trip: the traveller's stated goals, must-dos, constraints,

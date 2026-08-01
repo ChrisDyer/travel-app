@@ -10,6 +10,7 @@ import { PlacesInput } from './PlacesInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { apiUrl } from '@/lib/api';
+import { bookingIsOptional } from '@/lib/bookings';
 import { bookingStatusLabel } from './BookingStatusBadge';
 
 interface EventFormProps {
@@ -39,9 +40,15 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
   const [error, setError] = useState('');
   const [selectedDayId, setSelectedDayId] = useState(day.id);
   const [selectedCategory, setSelectedCategory] = useState<EventCategory>(event?.category ?? defaultCategory);
-  const [takesReservations, setTakesReservations] = useState<boolean>(Boolean(event?.takesReservations ?? true));
+  // Backed by trip_events.takes_reservations: "takes reservations" for a restaurant,
+  // "needs booking" for an activity. Off = a walk-in / walk-up plan, no booking to track.
+  const [needsBooking, setNeedsBooking] = useState<boolean>(Boolean(event?.takesReservations ?? true));
   const isHike = selectedCategory === 'hike';
   const isRestaurant = selectedCategory === 'restaurant';
+  const bookingOptional = bookingIsOptional(selectedCategory);
+  const skipBooking = bookingOptional && !needsBooking;
+  // Restaurants keep their cancellation terms either way; a walk-up activity has none.
+  const skipActivityBooking = skipBooking && !isRestaurant;
   const typeLabel = isHike ? 'Hike' : isRestaurant ? 'Restaurant' : 'Event';
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -59,21 +66,21 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
       endTime: form.get('endTime') || null,
       location: isHike ? trailheadLocation : form.get('location') || null,
       locationUrl: isHike ? null : form.get('locationUrl') || null,
-      bookingStatus: isHike || (isRestaurant && !takesReservations) ? 'unbooked' : form.get('bookingStatus'),
-      confirmationNumber: isHike || (isRestaurant && !takesReservations) ? null : form.get('confirmationNumber') || null,
-      bookingUrl: isHike || isRestaurant ? null : form.get('bookingUrl') || null,
+      bookingStatus: isHike || skipBooking ? 'unbooked' : form.get('bookingStatus'),
+      confirmationNumber: isHike || skipBooking ? null : form.get('confirmationNumber') || null,
+      bookingUrl: isHike || isRestaurant || skipActivityBooking ? null : form.get('bookingUrl') || null,
       cost: isHike || isRestaurant ? null : form.get('cost') ? Number(form.get('cost')) : null,
       currency: isHike || isRestaurant ? null : form.get('currency') || null,
-      seatInfo: isHike || isRestaurant ? null : form.get('seatInfo') || null,
-      vendor: isHike || isRestaurant ? null : form.get('vendor') || null,
-      orderNumber: isHike || isRestaurant ? null : form.get('orderNumber') || null,
-      cancellationPolicy: isHike ? null : form.get('cancellationPolicy') || null,
-      cancellationDeadline: isHike ? null : form.get('cancellationDeadline') || null,
+      seatInfo: isHike || isRestaurant || skipActivityBooking ? null : form.get('seatInfo') || null,
+      vendor: isHike || isRestaurant || skipActivityBooking ? null : form.get('vendor') || null,
+      orderNumber: isHike || isRestaurant || skipActivityBooking ? null : form.get('orderNumber') || null,
+      cancellationPolicy: isHike || skipActivityBooking ? null : form.get('cancellationPolicy') || null,
+      cancellationDeadline: isHike || skipActivityBooking ? null : form.get('cancellationDeadline') || null,
       hikeDistance: isHike ? form.get('hikeDistance') || null : null,
       hikeElevation: isHike ? form.get('hikeElevation') || null : null,
       trailheadLocation: isHike ? trailheadLocation : null,
       alltrailsUrl: isHike ? form.get('alltrailsUrl') || null : null,
-      takesReservations: isRestaurant ? (takesReservations ? 1 : 0) : 1,
+      takesReservations: bookingOptional ? (needsBooking ? 1 : 0) : 1,
       partySize: isRestaurant && form.get('partySize') ? Number(form.get('partySize')) : null,
       notes: form.get('notes') || null,
       sortOrder: event?.sortOrder ?? 0,
@@ -133,10 +140,10 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
                 </SelectContent>
               </Select>
             </div>
-            {isRestaurant ? (
+            {bookingOptional ? (
               <div className="space-y-1.5">
-                <Label>Takes reservations?</Label>
-                <Select value={takesReservations ? 'yes' : 'no'} onValueChange={(v) => setTakesReservations(v === 'yes')}>
+                <Label>{isRestaurant ? 'Takes reservations?' : 'Needs booking?'}</Label>
+                <Select value={needsBooking ? 'yes' : 'no'} onValueChange={(v) => setNeedsBooking(v === 'yes')}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="yes">Yes</SelectItem>
@@ -159,7 +166,7 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
             ) : null}
           </div>
 
-          {isRestaurant && takesReservations && (
+          {bookingOptional && needsBooking && (
             <div className="space-y-1.5">
               <Label>Booking Status</Label>
               <Select name="bookingStatus" defaultValue={event?.bookingStatus ?? 'unbooked'}>
@@ -255,7 +262,7 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
                   <Label htmlFor="partySize">Party Size</Label>
                   <Input id="partySize" name="partySize" type="number" min="1" step="1" defaultValue={event?.partySize ?? ''} placeholder="e.g. 4" />
                 </div>
-                {takesReservations && (
+                {needsBooking && (
                   <div className="space-y-1.5">
                     <Label htmlFor="confirmationNumber">Reservation Reference</Label>
                     <Input id="confirmationNumber" name="confirmationNumber" defaultValue={event?.confirmationNumber ?? ''} placeholder="Confirmation # or name" />
@@ -286,16 +293,18 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
                 <Input id="locationUrl" name="locationUrl" type="url" defaultValue={event?.locationUrl ?? ''} placeholder="https://" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirmationNumber">Confirmation #</Label>
-                  <Input id="confirmationNumber" name="confirmationNumber" defaultValue={event?.confirmationNumber ?? ''} />
+              {!skipActivityBooking && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirmationNumber">Confirmation #</Label>
+                    <Input id="confirmationNumber" name="confirmationNumber" defaultValue={event?.confirmationNumber ?? ''} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bookingUrl">Booking URL</Label>
+                    <Input id="bookingUrl" name="bookingUrl" type="url" defaultValue={event?.bookingUrl ?? ''} placeholder="https://" />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="bookingUrl">Booking URL</Label>
-                  <Input id="bookingUrl" name="bookingUrl" type="url" defaultValue={event?.bookingUrl ?? ''} placeholder="https://" />
-                </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -308,32 +317,36 @@ export function EventForm({ tripId, day, days, event, defaultCategory = 'activit
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="seatInfo">Seat / Section Info</Label>
-                <Input id="seatInfo" name="seatInfo" defaultValue={event?.seatInfo ?? ''} placeholder="e.g. Seats 24A & 24B or Section 317, Row 5" />
-              </div>
+              {!skipActivityBooking && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="seatInfo">Seat / Section Info</Label>
+                    <Input id="seatInfo" name="seatInfo" defaultValue={event?.seatInfo ?? ''} placeholder="e.g. Seats 24A & 24B or Section 317, Row 5" />
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="vendor">Vendor</Label>
-                  <Input id="vendor" name="vendor" defaultValue={event?.vendor ?? ''} placeholder="e.g. StubHub, Delta, Enterprise" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="orderNumber">Order #</Label>
-                  <Input id="orderNumber" name="orderNumber" defaultValue={event?.orderNumber ?? ''} placeholder="e.g. 636899297" />
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="vendor">Vendor</Label>
+                      <Input id="vendor" name="vendor" defaultValue={event?.vendor ?? ''} placeholder="e.g. StubHub, Delta, Enterprise" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="orderNumber">Order #</Label>
+                      <Input id="orderNumber" name="orderNumber" defaultValue={event?.orderNumber ?? ''} placeholder="e.g. 636899297" />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="cancellationPolicy">Cancellation Policy</Label>
-                  <Input id="cancellationPolicy" name="cancellationPolicy" defaultValue={event?.cancellationPolicy ?? ''} placeholder="e.g. Non-refundable, Cancel anytime" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="cancellationDeadline">Cancel By</Label>
-                  <Input id="cancellationDeadline" name="cancellationDeadline" type="date" defaultValue={event?.cancellationDeadline ?? ''} />
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cancellationPolicy">Cancellation Policy</Label>
+                      <Input id="cancellationPolicy" name="cancellationPolicy" defaultValue={event?.cancellationPolicy ?? ''} placeholder="e.g. Non-refundable, Cancel anytime" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cancellationDeadline">Cancel By</Label>
+                      <Input id="cancellationDeadline" name="cancellationDeadline" type="date" defaultValue={event?.cancellationDeadline ?? ''} />
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
 

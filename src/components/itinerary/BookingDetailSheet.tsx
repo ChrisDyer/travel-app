@@ -6,7 +6,9 @@ import { BookingRef, BookingKind } from './booking-selection';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { BrandLogo } from './BrandLogo';
-import { BookingStatusBadge, NoReservationsBadge } from './BookingStatusBadge';
+import { BookingStatusBadge, NoBookingBadge } from './BookingStatusBadge';
+import { apiUrl } from '@/lib/api';
+import { skipsBooking } from '@/lib/bookings';
 import { getMapsUrl } from '@/lib/maps';
 import { fmt12, fmtShortDate } from '@/lib/dates';
 import { toast } from '@/components/ui/toast';
@@ -145,7 +147,7 @@ export function BookingDetailSheet({
     if (!selection) return;
     setDeleting(true);
     try {
-      const res = await fetch(deleteEndpoint[selection.kind](tripId, selection.id), { method: 'DELETE' });
+      const res = await fetch(apiUrl(deleteEndpoint[selection.kind](tripId, selection.id)), { method: 'DELETE' });
       if (!res.ok) throw new Error();
       onDeleted(selection);
     } catch {
@@ -311,12 +313,12 @@ export function BookingDetailSheet({
       itemFound = true;
       const isHike = e.category === 'hike';
       const isRestaurant = e.category === 'restaurant';
-      const noReservations = isRestaurant && !e.takesReservations;
+      const noBooking = skipsBooking(e);
       const hikeLocation = e.trailheadLocation ?? e.location;
       icon = <BrandLogo name={logoName(e.title)} fallbackNames={[hikeLocation, e.location, e.vendor]} fallback={categoryIcons[e.category] ?? '📌'} heightClass="h-5" />;
       title = e.title;
       subtitle = isHike ? hikeLocation : e.location;
-      status = isHike ? null : noReservations ? <NoReservationsBadge /> : <BookingStatusBadge status={e.bookingStatus} />;
+      status = isHike ? null : noBooking ? <NoBookingBadge category={e.category} /> : <BookingStatusBadge status={e.bookingStatus} />;
       const day = days.find((d) => d.id === e.tripDayId);
       const dayCaption = day ? `Day ${day.dayNumber} · ${fmtShortDate(day.date)}` : null;
       const timeRange = [fmt12(e.startTime), fmt12(e.endTime)].filter(Boolean).join(' – ') || null;
@@ -345,7 +347,7 @@ export function BookingDetailSheet({
         ],
         [
           { label: 'Party size', value: e.partySize },
-          ...(noReservations ? [] : [{ label: 'Reservation', value: e.confirmationNumber }]),
+          ...(noBooking ? [] : [{ label: 'Reservation', value: e.confirmationNumber }]),
         ],
         [
           { label: 'Policy', value: e.cancellationPolicy },
@@ -361,18 +363,19 @@ export function BookingDetailSheet({
           { label: 'Location', value: addressValue(e.location) },
           { label: 'Website', value: linkValue(e.locationUrl, 'Website ↗') },
         ],
-        [
+        // A walk-up activity has no confirmation, vendor or cancellation terms to show.
+        ...(noBooking ? [] : [[
           { label: 'Confirmation #', value: e.confirmationNumber },
           { label: 'Vendor', value: e.vendor },
           { label: 'Order #', value: e.orderNumber },
           { label: 'Seats', value: e.seatInfo },
           { label: 'Booking', value: linkValue(e.bookingUrl, 'View booking ↗') },
-        ],
+        ]]),
         [{ label: 'Cost', value: costValue(e.cost, e.currency) }],
-        [
+        ...(noBooking ? [] : [[
           { label: 'Policy', value: e.cancellationPolicy },
           { label: 'Deadline', value: fmtShortDate(e.cancellationDeadline) },
-        ],
+        ]]),
         [{ label: 'Notes', value: notesValue(e.notes) }],
       ];
     }

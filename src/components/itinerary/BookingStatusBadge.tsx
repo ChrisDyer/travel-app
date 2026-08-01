@@ -1,4 +1,5 @@
-import { BookingStatus } from '@/types/travel';
+import { BookingStatus, EventCategory } from '@/types/travel';
+import { noBookingLabel } from '@/lib/bookings';
 
 export const bookingStatusLabel: Record<BookingStatus, string> = {
   confirmed: 'Confirmed',
@@ -21,11 +22,12 @@ export function BookingStatusBadge({ status }: { status: BookingStatus }) {
   );
 }
 
-// Shown for restaurants that don't take reservations, in place of a booking status.
-export function NoReservationsBadge() {
+// Shown in place of a booking status for plans that need none: restaurants that don't
+// take reservations, activities you can just turn up to.
+export function NoBookingBadge({ category }: { category: EventCategory }) {
   return (
     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-stone-100 text-stone-500 whitespace-nowrap">
-      No reservations
+      {noBookingLabel(category)}
     </span>
   );
 }
