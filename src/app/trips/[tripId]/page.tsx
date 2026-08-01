@@ -6,7 +6,7 @@ import { TripWeather } from '@/components/itinerary/TripWeather';
 import { TripHeaderActions } from '@/components/trips/TripHeaderActions';
 import { TripStatusNudge } from '@/components/trips/TripStatusNudge';
 import { TravelShell } from '@/appShell/TravelShell';
-import { Trip, TripDay, TripEvent, PackingItem, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
+import { Trip, TripDay, TripEvent, PackingItem, TripFlight, TripHotel, TripLeg, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
 import { statusColors, statusLabel } from '@/lib/trip-status';
 import { formatDateRange } from '@/lib/dates';
 
@@ -23,6 +23,8 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
   const packing = camelizeAll<PackingItem>(db.prepare('SELECT * FROM packing_items WHERE trip_id = ? ORDER BY sort_order ASC').all(tripId) as Record<string, unknown>[]);
   const flights = camelizeAll<TripFlight>(db.prepare('SELECT * FROM trip_flights WHERE trip_id = ? ORDER BY departure_date ASC, departure_time ASC').all(tripId) as Record<string, unknown>[]);
   const hotels = camelizeAll<TripHotel>(db.prepare('SELECT * FROM trip_hotels WHERE trip_id = ? ORDER BY check_in_date ASC').all(tripId) as Record<string, unknown>[]);
+  const legs = camelizeAll<TripLeg>(db.prepare('SELECT * FROM trip_legs WHERE trip_id = ? ORDER BY start_date ASC, sort_order ASC').all(tripId) as Record<string, unknown>[]);
+  const legsVersion = (db.prepare('SELECT MAX(updated_at) AS value FROM trip_legs WHERE trip_id = ?').get(tripId) as { value: string | null }).value ?? '';
   const parkingSpots = camelizeAll<TripParking>(db.prepare('SELECT * FROM trip_parking WHERE trip_id = ? ORDER BY start_date ASC, start_time ASC').all(tripId) as Record<string, unknown>[]);
   const rentalCars = camelizeAll<TripRentalCar>(db.prepare('SELECT * FROM trip_rental_cars WHERE trip_id = ? ORDER BY pickup_date ASC, pickup_time ASC').all(tripId) as Record<string, unknown>[]);
   const transitItems = camelizeAll<TripTransit>(db.prepare('SELECT * FROM trip_transit WHERE trip_id = ? ORDER BY departure_date ASC, departure_time ASC').all(tripId) as Record<string, unknown>[]);
@@ -46,7 +48,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
       }
     >
       <TripStatusNudge trip={trip} />
-      <TripWeather tripId={tripId} />
+      <TripWeather tripId={tripId} legsVersion={legsVersion} />
       <ItineraryDocument
         key={trip.updatedAt as string}
         trip={trip}
@@ -54,6 +56,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
         initialEvents={events}
         initialFlights={flights}
         initialHotels={hotels}
+        initialLegs={legs}
         initialParking={parkingSpots}
         initialRentalCars={rentalCars}
         initialTransit={transitItems}

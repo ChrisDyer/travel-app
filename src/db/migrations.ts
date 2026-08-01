@@ -243,6 +243,26 @@ const migrations = [
       ALTER TABLE trips ADD COLUMN planning_notes_updated_by TEXT;
     `,
   },
+  {
+    name: '007_trip_legs',
+    sql: `
+      CREATE TABLE IF NOT EXISTS trip_legs (
+        id TEXT PRIMARY KEY,
+        trip_id TEXT NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+        place TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        latitude REAL,
+        longitude REAL,
+        resolved_name TEXT,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_trip_legs_trip ON trip_legs (trip_id, start_date);
+    `,
+  },
 ];
 
 function addColumnIfMissing(db: Database.Database, table: string, column: string, definition: string): void {

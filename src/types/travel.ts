@@ -41,6 +41,23 @@ export interface TripDay {
   title: string | null;
   notes: string | null;
 }
+export interface TripLeg {
+  id: string;
+  tripId: string;
+  /** What the traveller typed - the geocoder input. */
+  place: string;
+  startDate: string;
+  endDate: string;
+  /** Cached geocode. NULL until first resolved, or after `place` changes. */
+  latitude: number | null;
+  longitude: number | null;
+  /** The geocoder's display name, e.g. 'Port Angeles, United States'. */
+  resolvedName: string | null;
+  /** Tiebreaker for overlapping legs only - legs display in date order. */
+  sortOrder: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
 
 export interface TripEvent {
   id: string;

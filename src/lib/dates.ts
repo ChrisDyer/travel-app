@@ -7,6 +7,11 @@ export function nextDay(date: string): string {
   dt.setUTCDate(dt.getUTCDate() + 1);
   return dt.toISOString().slice(0, 10);
 }
+export function previousDay(date: string): string {
+  const dt = new Date(date + 'T12:00:00Z');
+  dt.setUTCDate(dt.getUTCDate() - 1);
+  return dt.toISOString().slice(0, 10);
+}
 
 export function datesBetween(start: string, end: string): string[] {
   const out: string[] = [];

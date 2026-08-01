@@ -224,8 +224,20 @@ Manual test cases for the travel itinerary app before going live.
 - [ ] Read-only user, direct `PUT` to the brief route → 403 `read_only`
 - [ ] Duplicate a trip → the copy inherits the brief text but has no undo history
 
----
+## Trip Legs
 
+- [ ] Trip with no legs -> single-destination weather forecast is unchanged
+- [ ] Two legs -> weather renders two captioned groups with the correct dates
+- [ ] Overlap day -> weather resolves to the later-starting leg, exactly once
+- [ ] Gap between legs -> weather falls back to `trips.destination`
+- [ ] Edit a leg's place -> forecast changes, not just the caption
+- [ ] Add/edit/delete a leg -> weather updates without a page reload and the itinerary does not remount
+- [ ] Use my hotels -> proposals are shown, Cancel writes nothing, Apply writes only after confirmation
+- [ ] Read-only user -> list is readable and Add/Edit/Delete/Use my hotels controls are hidden
+- [ ] Narrow to <1024px -> panel appears only under the Overview tab
+- [ ] Cmd-P and `/trips/{id}/print` -> the panel does not appear
+
+---
 ## Form Error Handling
 
 - [ ] Submit any form with server returning 500 → error message shown above buttons

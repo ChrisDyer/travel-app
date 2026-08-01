@@ -65,6 +65,14 @@ itself does not record. Four columns on `trips` (migration `006_trip_brief`):
 
 Full design in `docs/trip-brief/`.
 
+## Trip legs
+
+A trip leg is one stay within a trip: `trip_legs.place` plus an inclusive `start_date` / `end_date`. `trips.destination` is unchanged and remains the trip headline plus the fallback location when no leg covers a date.
+
+- **One resolver.** `src/lib/legs.ts` is the single answer to "where am I on date X?". Gaps fall back to `trips.destination`. Overlaps are allowed; the leg with the later `startDate` wins, with `sortOrder` and then `id` as deterministic tiebreakers. Weather and UI warnings must call this helper instead of reimplementing the rule.
+- **Place changes invalidate geocodes.** Any path that changes `trip_legs.place` must clear `latitude`, `longitude`, and `resolved_name` in the same write. The PATCH route enforces this; the weather route is the only code that fills those derived cache columns.
+- **Leg writes never bump `trips.updated_at`.** The trip page keys `<ItineraryDocument>` by `trip.updatedAt`; changing it remounts the client tree and drops open panels/forms. Weather refreshes through `legsVersion` (`MAX(trip_legs.updated_at)` in `src/app/trips/[tripId]/page.tsx`) plus `router.refresh()` after successful leg edits.
+- Overlaps, gaps, and legs outside the trip range are deliberately legal. The editor warns about them but does not block saving. Only reversed ranges (`endDate < startDate`) are rejected.
 ## Plan folders
 
 New multi-phase plans go under `docs/<slug>/` (see `docs/redesign`, `docs/fixes`,

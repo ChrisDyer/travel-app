@@ -132,6 +132,18 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
       );
     }
 
+    const legs = db.prepare('SELECT * FROM trip_legs WHERE trip_id = ?').all(tripId) as Record<string, unknown>[];
+    const insertLeg = db.prepare(`
+      INSERT INTO trip_legs (id, trip_id, place, start_date, end_date, latitude, longitude,
+        resolved_name, sort_order, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const l of legs) {
+      insertLeg.run(
+        crypto.randomUUID(), newTripId, l.place, l.start_date, l.end_date, l.latitude, l.longitude,
+        l.resolved_name, l.sort_order, now, now
+      );
+    }
     db.prepare(`
       INSERT INTO trip_cover_images (trip_id, data, updated_at)
       SELECT ?, data, ? FROM trip_cover_images WHERE trip_id = ?

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, PackingItem, EventCategory } from '@/types/travel';
+import { Trip, TripDay, TripEvent, TripFlight, TripHotel, TripLeg, TripParking, TripRentalCar, TripTransit, PackingItem, EventCategory } from '@/types/travel';
 import { BookingKind, BookingRef } from './booking-selection';
 import { AddPlanMenu } from './AddPlanMenu';
 import { BookingDetailSheet } from './BookingDetailSheet';
@@ -11,6 +11,7 @@ import { KeyBookings } from './KeyBookings';
 import { TripMap, MapLocation } from './TripMap';
 import { CancellationDeadlines } from './CancellationDeadlines';
 import { TripBrief } from './TripBrief';
+import { TripLegs } from './TripLegs';
 import { FlightForm } from './FlightForm';
 import { HotelForm } from './HotelForm';
 import { ParkingForm } from './ParkingForm';
@@ -29,6 +30,7 @@ interface ItineraryDocumentProps {
   initialEvents: TripEvent[];
   initialFlights: TripFlight[];
   initialHotels: TripHotel[];
+  initialLegs: TripLeg[];
   initialParking: TripParking[];
   initialRentalCars: TripRentalCar[];
   initialTransit: TripTransit[];
@@ -39,7 +41,7 @@ const kindLabel: Record<BookingRef['kind'], string> = {
   flight: 'Flight', hotel: 'Hotel', parking: 'Parking', rentalCar: 'Rental car', transit: 'Transit', event: 'Event',
 };
 
-export function ItineraryDocument({ trip, initialDays, initialEvents, initialFlights, initialHotels, initialParking, initialRentalCars, initialTransit, initialPackingItems }: ItineraryDocumentProps) {
+export function ItineraryDocument({ trip, initialDays, initialEvents, initialFlights, initialHotels, initialLegs, initialParking, initialRentalCars, initialTransit, initialPackingItems }: ItineraryDocumentProps) {
   const [days, setDays] = useState<TripDay[]>(initialDays);
   const [events, setEvents] = useState<TripEvent[]>(initialEvents);
   const [flights, setFlights] = useState<TripFlight[]>(initialFlights);
@@ -287,6 +289,8 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
           </div>
 
           <div className={cn(mobileTab !== 'overview' && 'max-lg:hidden', 'print:block')}>
+            <TripLegs trip={trip} initialLegs={initialLegs} hotels={hotels} />
+
             <CancellationDeadlines
               hotels={hotels}
               events={events}
@@ -477,4 +481,3 @@ export function ItineraryDocument({ trip, initialDays, initialEvents, initialFli
     </>
   );
 }
-

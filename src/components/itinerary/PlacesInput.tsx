@@ -17,7 +17,7 @@ interface PlacesInputProps {
 
 const libraries: ('places')[] = ['places'];
 
-export function PlacesInput({ id, name, defaultValue, onChange, placeholder, className, required }: PlacesInputProps) {
+export function PlacesInput({ id, name, value, defaultValue, onChange, placeholder, className, required }: PlacesInputProps) {
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -40,7 +40,9 @@ export function PlacesInput({ id, name, defaultValue, onChange, placeholder, cla
       <Input
         id={id}
         name={name}
+        value={value}
         defaultValue={defaultValue}
+        onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
         className={className}
         required={required}
@@ -58,7 +60,9 @@ export function PlacesInput({ id, name, defaultValue, onChange, placeholder, cla
         ref={inputRef}
         id={id}
         name={name}
+        value={value}
         defaultValue={defaultValue}
+        onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
         className={className}
         required={required}
