@@ -1,6 +1,6 @@
 # Trip Legs — Progress
 
-> **Status: Phases 1-3 implemented locally in travel-app; Phase 4 MCP/deploy remains pending explicit approval.**
+> **Status: Complete. Travel-app and MCP-server are deployed to production.**
 > Append one report per completed phase (format below). Never rewrite an earlier
 > phase report; later corrections are new dated entries.
 
@@ -42,3 +42,11 @@ Report format (copy the skeleton):
 **Deviations from spec (and why):** Visual/manual browser acceptance steps were not fully run in this terminal-only pass.
 **Known gaps / follow-ups:** Complete the manual UI checklist, especially no-remount behavior, read-only production header simulation, and mobile/print placement.
 **Verification evidence:** `npm run build` passed; `npm run lint` passed with existing warnings; the server page now passes `initialLegs` and `legsVersion` into the client tree.
+
+## Phase 4 - MCP deploy and docs - 2026-08-01
+
+**Status:** complete-with-deviations
+**What was built/done:** Added `kind: "leg"` to the MCP travel write registry, exposed legs in `get_trip_details`, documented leg write behavior in both app repos, committed and deployed travel-app and mcp-server to production.
+**Deviations from spec (and why):** Production UI checks were performed through API/MCP smoke tests rather than a browser walkthrough in this pass.
+**Known gaps / follow-ups:** A human visual pass can still confirm the Trips page panel placement and mobile ergonomics.
+**Verification evidence:** travel-app commit `906163b` deployed with `Deploy-Travel`; mcp-server commit `4d6471f` deployed with `Deploy-Mcp`; production smoke test confirmed full MCP scope has 22 tools, genealogy scope has 7 tools, MCP rejects coordinate writes for legs, creates/reads/updates/deletes temporary legs, `/weather` returns 2 leg segments while temporary legs exist, and cleanup left 0 smoke-test legs.
