@@ -325,6 +325,28 @@ retention, mirroring the finance-app scheme:
 > backup covers them automatically. A legacy 2:15 AM `trip-photos` sync line remains in
 > the crontab — harmless, removable once confirmed empty.
 
+> ### ⚠ KNOWN ISSUE (found 2026-08-01, not yet fixed on the server)
+>
+> **The `cp` on the 2:10 AM line is not a safe SQLite backup.** The database runs in **WAL
+> mode**, so committed transactions sit in `local.db-wal` until a checkpoint folds them into
+> `local.db`. Copying only the main file captures whatever was last checkpointed, and a `cp`
+> of a live database can also capture a torn page mid-write.
+>
+> This is not theoretical: on 2026-08-01 the *local* `local.db` was last checkpointed
+> 2026-07-10 while 1.1 MB of newer data sat unmerged in the WAL — a `cp` backup would have
+> silently lost three weeks of trips. The same failure mode applies to the VPS, and rclone
+> then mirrors the incomplete file to OneDrive as the disaster-recovery copy.
+>
+> Fix (replace the 2:10 AM line, requires `apt install sqlite3` if absent):
+>
+> ```bash
+> 10 2 * * * mkdir -p ~/travel-app/backups && sqlite3 ~/travel-app/local.db ".backup '$HOME/travel-app/backups/local-$(date +\%Y-\%m-\%d).db'"
+> ```
+>
+> `.backup` is atomic, WAL-aware, and safe against a running app. After changing the
+> crontab, verify with `ssh chris@91.99.230.234 'crontab -l'`, confirm the next night's file
+> opens and has the expected row counts, and update the root `README.md` backups table.
+
 Enable Hetzner automatic snapshots as a full-disk fallback:
 Hetzner Console → Server → **Backups** → Enable.
 

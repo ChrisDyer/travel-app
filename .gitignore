@@ -40,10 +40,17 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local database
+# local database (including the .bak copies the plan docs ask you to take before a
+# migration phase -- these are full copies of real trip data and must never be committed)
 local.db
 local.db-shm
 local.db-wal
+local.db.bak
+*.db.bak
+
+# playwright / test artifacts
+/test-results/
+/playwright-report/
 
 # user-uploaded cover photos (created at runtime, persisted on server)
 public/trip-photos/
