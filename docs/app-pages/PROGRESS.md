@@ -1,6 +1,6 @@
 # App-Level Pages — Progress
 
-> **Status: Audited and remediated 2026-08-01. All four phases implemented and verified locally, including the Phase 3 geocode acceptance test that had not been run. Not yet committed or deployed; the Gmail OAuth round-trip and the mobile-drawer browser checks still need a human.**
+> **Status: Complete and deployed to production 2026-08-01 (travel-app `e9f0a6e`, mcp-server `2fa94da`). All four phases verified locally and in production. Two follow-ups need a human: the Gmail OAuth round-trip and the mobile-drawer browser checks.**
 > Append one report per completed phase (format below). Never rewrite an earlier
 > phase report; later corrections are new dated entries.
 
@@ -146,3 +146,36 @@ correction, per the convention at the top of this file. The earlier reports are 
   and the All/Upcoming/Past filter were read, not clicked.
 - **The production backup cron** (defect 4) is still unfixed on the VPS.
 - `digest_*` remains deliberately absent, as specified.
+
+## Deployment — 2026-08-01
+
+**Status:** complete
+
+**Shipped:** travel-app `569594f` (feature) + `e9f0a6e` (WAL backup fix), pushed to
+`main` and deployed with `Deploy-Travel`. mcp-server `2fa94da` pushed; it is a comment
+only, so no `Deploy-Mcp` was run, per Phase 4 §7.
+
+**Production verification:**
+
+- Migration `008_trip_geocode` ran automatically at import: exactly one row in
+  `schema_migrations`, and `latitude`/`longitude`/`resolved_name` present exactly once on
+  `trips` in the real production database (`DB_PATH=/home/chris/travel-app/local.db` —
+  the standalone-build quirk in `RUNBOOK.md` did not bite).
+- Geocode cache filled by hitting `/travel/api/map` once. All 7 production trips resolved
+  with plausible coordinates (Seattle 47.606/−122.332, Chicago 41.850/−87.650,
+  Paris 48.853/2.349). Second call 0.166s → 0.012s, so the cache is being used.
+- `/travel`, `/travel/trips`, `/travel/map`, `/travel/settings`, `/travel/api/summary`
+  all return 200.
+- **The frozen contract survived the round trip.** `/api/summary` returns the correct
+  shape in production, and the homepage dashboard aggregate at `:3004/api/dashboard`
+  reports `"status": "up"` with `nextTrip.cancellations.upcoming` entries carrying no
+  `trip` key — the exact regression Rule 4 exists to prevent.
+- No access or refresh token appears in the production Settings HTML.
+
+**Note:** production trip data differs from local (7 trips; the August trip's destination
+is "Seattle, WA" there, "Washington" locally), so production numbers will not match the
+local verification figures above.
+
+**Still open:** Gmail OAuth connect/disconnect round-trip and the mobile-drawer browser
+checks (both need a human at a browser), and the production backup cron fix flagged in
+`RUNBOOK.md`.
