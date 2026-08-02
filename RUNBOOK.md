@@ -316,36 +316,42 @@ The actual crontab (verify with `crontab -l`) keeps dated local copies with 30-d
 retention, mirroring the finance-app scheme:
 
 ```bash
-10 2 * * * mkdir -p ~/travel-app/backups && cp ~/travel-app/local.db ~/travel-app/backups/local-$(date +\%Y-\%m-\%d).db
+10 2 * * * mkdir -p ~/travel-app/backups && sqlite3 /home/chris/travel-app/local.db ".backup '/home/chris/travel-app/backups/local-$(date +\%Y-\%m-\%d).db'" >> ~/backup.log 2>&1
 10 3 * * * rclone sync ~/travel-app/backups/ onedrive:travel-backups >> ~/backup.log 2>&1
 10 4 * * * find ~/travel-app/backups -name "local-*.db" -mtime +30 -delete
 ```
+
+**Never change that first line back to `cp`.** See the history note below.
 
 > Cover images now live inside `local.db` as blobs (`trip_cover_images` table), so the DB
 > backup covers them automatically. A legacy 2:15 AM `trip-photos` sync line remains in
 > the crontab — harmless, removable once confirmed empty.
 
-> ### ⚠ KNOWN ISSUE (found 2026-08-01, not yet fixed on the server)
+> ### History — the `cp` backup bug (found and fixed 2026-08-01)
 >
-> **The `cp` on the 2:10 AM line is not a safe SQLite backup.** The database runs in **WAL
-> mode**, so committed transactions sit in `local.db-wal` until a checkpoint folds them into
-> `local.db`. Copying only the main file captures whatever was last checkpointed, and a `cp`
-> of a live database can also capture a torn page mid-write.
+> Until 2026-08-01 the 2:10 AM line used `cp ~/travel-app/local.db …`. **That is not a valid
+> backup of a WAL-mode database.** Committed transactions sit in `local.db-wal` until a
+> checkpoint folds them into `local.db`, so `cp` captures only whatever was last
+> checkpointed; it can also catch a torn page mid-write.
 >
-> This is not theoretical: on 2026-08-01 the *local* `local.db` was last checkpointed
-> 2026-07-10 while 1.1 MB of newer data sat unmerged in the WAL — a `cp` backup would have
-> silently lost three weeks of trips. The same failure mode applies to the VPS, and rclone
-> then mirrors the incomplete file to OneDrive as the disaster-recovery copy.
+> It was losing real data, not theoretically. Measured that morning:
 >
-> Fix (replace the 2:10 AM line, requires `apt install sqlite3` if absent):
+> | | trips | events | hotels | latest migration | size |
+> |---|---|---|---|---|---|
+> | `local-2026-08-01.db` (that night's backup) | 5 | 9 | 5 | `001_initial_schema` | 106 KB |
+> | live `local.db` | 7 | 51 | 10 | `008_trip_geocode` | 590 KB |
 >
-> ```bash
-> 10 2 * * * mkdir -p ~/travel-app/backups && sqlite3 ~/travel-app/local.db ".backup '$HOME/travel-app/backups/local-$(date +\%Y-\%m-\%d).db'"
-> ```
+> Four consecutive nightly backups were byte-identical at 106 KB, and rclone had been
+> mirroring that incomplete file to OneDrive as the disaster-recovery copy. A restore would
+> have lost 42 events, 2 trips, 5 hotels and seven migrations of schema.
 >
-> `.backup` is atomic, WAL-aware, and safe against a running app. After changing the
-> crontab, verify with `ssh chris@91.99.230.234 'crontab -l'`, confirm the next night's file
-> opens and has the expected row counts, and update the root `README.md` backups table.
+> Verified after the fix: the cron line was run in a cron-like environment
+> (`env -i PATH=/usr/bin:/bin /bin/sh -c …`) and produced a 606 KB file with 7 trips,
+> 51 events, migration `008_trip_geocode`, and `PRAGMA integrity_check` = `ok`. A complete
+> copy was synced to OneDrive the same day.
+>
+> **`sqlite3` (3.46.1) is installed at `/usr/bin/sqlite3`** — on cron's minimal PATH, so no
+> PATH export is needed on that line.
 
 Enable Hetzner automatic snapshots as a full-disk fallback:
 Hetzner Console → Server → **Backups** → Enable.

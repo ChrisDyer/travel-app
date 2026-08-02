@@ -14,7 +14,8 @@ in `local.db-wal` until a checkpoint and a plain `cp` of the main file silently 
 (measured 2026-08-01: three weeks of data missing from such a copy). Use
 `sqlite3 local.db ".backup 'local.db.bak'"`, or without the CLI:
 `node -e "require('better-sqlite3')('local.db',{readonly:true}).prepare(\"VACUUM INTO 'local.db.bak'\").run()"`.
-The production backup cron has the same flaw — see the KNOWN ISSUE box in `RUNBOOK.md`.
+The production backup cron had the same flaw and was silently losing data; fixed 2026-08-01
+to use `sqlite3 .backup` — see the history note in `RUNBOOK.md`.
 
 ## Per-user read-only role
 
