@@ -1,51 +1,26 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
+import { cancellationDeadlines, daysUntil, upcomingTrips } from '@/lib/agenda';
+import type { Trip } from '@/types/travel';
 
-type TripRow = {
-  id: string;
-  title: string;
-  destination: string;
-  start_date: string;
-  end_date: string;
-  cover_image_url: string | null;
-};
-
-type CancellationRow = {
-  type: 'hotel' | 'event';
-  label: string;
-  deadline: string;
-};
-
-const MS_PER_DAY = 86400000;
-
-function daysUntil(date: string, today: string): number {
-  const target = new Date(date + 'T00:00:00Z').getTime();
-  const now = new Date(today + 'T00:00:00Z').getTime();
-  return Math.round((target - now) / MS_PER_DAY);
+// Deliberately UTC, NOT localToday() from trip-status.ts. This route feeds the cross-app
+// homepage dashboard in another repo, and its response shape and values are frozen
+// (docs/app-pages/00-overview.md, rule 4). The original implementation used the UTC date;
+// switching to the server's local zone would silently shift trip selection and every
+// daysUntil by a day whenever the server is not on UTC. The Overview page uses
+// localToday() -- the two are allowed to disagree, because only this one is a contract.
+function summaryToday(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function homepageCoverUrl(trip: TripRow): string | null {
+function homepageCoverUrl(trip: Pick<Trip, 'id' | 'coverImageUrl'>): string | null {
   const hasBlob = db.prepare('SELECT 1 FROM trip_cover_images WHERE trip_id = ?').get(trip.id);
-  if (!hasBlob && !trip.cover_image_url) return null;
+  if (!hasBlob && !trip.coverImageUrl) return null;
   return `/travel/api/trips/${trip.id}/cover-image`;
 }
 
-function cancellationsForTrip(tripId: string, today: string) {
-  const hotelRows = db.prepare(`
-    SELECT 'hotel' AS type, name AS label, cancellation_deadline AS deadline
-    FROM trip_hotels
-    WHERE trip_id = ? AND cancellation_deadline IS NOT NULL AND trim(cancellation_deadline) != ''
-  `).all(tripId) as CancellationRow[];
-  const eventRows = db.prepare(`
-    SELECT 'event' AS type, title AS label, cancellation_deadline AS deadline
-    FROM trip_events
-    WHERE trip_id = ? AND cancellation_deadline IS NOT NULL AND trim(cancellation_deadline) != ''
-  `).all(tripId) as CancellationRow[];
-
-  const all = [...hotelRows, ...eventRows]
-    .filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.deadline))
-    .map((row) => ({ ...row, daysUntil: daysUntil(row.deadline, today) }))
-    .sort((a, b) => a.deadline.localeCompare(b.deadline));
+function cancellationsForTrip(userId: string, tripId: string, today: string) {
+  const all = cancellationDeadlines(userId, today).filter((row) => row.trip.id === tripId);
 
   return {
     // count/next keep their original semantics (all dated deadlines, even past ones)
@@ -66,14 +41,9 @@ function cancellationsForTrip(tripId: string, today: string) {
 
 // Compact summary for the cross-app homepage dashboard: the next current/upcoming trip.
 export async function GET() {
-  const today = new Date().toISOString().slice(0, 10);
-  const trip = db.prepare(
-    `SELECT id, title, destination, start_date, end_date, cover_image_url
-     FROM trips
-     WHERE user_id = 'local' AND end_date >= ?
-     ORDER BY start_date ASC
-     LIMIT 1`
-  ).get(today) as TripRow | undefined;
+  const userId = 'local';
+  const today = summaryToday();
+  const trip = upcomingTrips(userId, today, 1)[0];
 
   if (!trip) return NextResponse.json({ nextTrip: null });
 
@@ -82,11 +52,11 @@ export async function GET() {
       id: trip.id,
       title: trip.title,
       destination: trip.destination,
-      startDate: trip.start_date,
-      endDate: trip.end_date,
-      daysUntil: daysUntil(trip.start_date, today), // negative or 0 means the trip is in progress
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+      daysUntil: daysUntil(trip.startDate, today), // negative or 0 means the trip is in progress
       coverImageUrl: homepageCoverUrl(trip),
-      cancellations: cancellationsForTrip(trip.id, today),
+      cancellations: cancellationsForTrip(userId, trip.id, today),
     },
   });
 }

@@ -13,7 +13,6 @@ export default async function TripsPage() {
     <TravelShell
       title="My Trips"
       subtitle="Plan, compare, and manage itineraries"
-      activeLocalNav="trips"
       actions={<NewTripAction />}
       contentClassName="max-w-6xl"
     >

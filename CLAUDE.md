@@ -9,6 +9,13 @@
 - `TESTING.md` — test strategy and commands.
 - Deploys: commit + push, then run `Deploy-Travel` from PowerShell (`$PROFILE`).
 
+**Backing up `local.db`: never `cp`.** SQLite runs in WAL mode here, so recent commits live
+in `local.db-wal` until a checkpoint and a plain `cp` of the main file silently omits them
+(measured 2026-08-01: three weeks of data missing from such a copy). Use
+`sqlite3 local.db ".backup 'local.db.bak'"`, or without the CLI:
+`node -e "require('better-sqlite3')('local.db',{readonly:true}).prepare(\"VACUUM INTO 'local.db.bak'\").run()"`.
+The production backup cron has the same flaw — see the KNOWN ISSUE box in `RUNBOOK.md`.
+
 ## Per-user read-only role
 
 `ADMIN_EMAILS` (comma-separated, case-insensitive) gates writes: any authenticated
@@ -80,8 +87,27 @@ New multi-phase plans go under `docs/<slug>/` (see `docs/redesign`, `docs/fixes`
 Register the folder in the root `projects.config.json` (path + `totalPhases`) and run
 `node tools/project-status.mjs` from the repo root.
 
+## App-level pages
+
+Routes: `/` is the Overview dashboard, `/trips` lists trips, `/trips/new` creates one,
+`/trips/{id}` is the itinerary, `/trips/{id}/print` is chrome-free print output, `/map`
+plots trips, and `/settings` shows connections/access/exports.
+
+Local nav active state comes from `usePathname()` via `matchNav()` in
+`src/appShell/TravelShell.tsx`. There is no `activeLocalNav` prop; pages do not pass nav
+state. Mobile local nav is `src/appShell/MobileNavDrawer.tsx` and renders the same nav model.
+
+Trip destination geocodes are derived cache on `trips`: `latitude`, `longitude`, and
+`resolved_name`. Any write that changes `trips.destination` must clear all three in the same
+`UPDATE`; a write that resends the same destination must not clear them. `GET /api/map` is the
+only code that fills them, and cache writes never bump `trips.updated_at` because the trip page
+keys `<ItineraryDocument>` by that value.
+
+`src/lib/agenda.ts` is the single cross-trip aggregation used by both the Overview page and
+`/api/summary`. `/api/summary` is consumed by the homepage app; its JSON shape is frozen.
+`src/lib/geocode.ts` is the one Open-Meteo geocoder shared by weather and `/api/map`.
 ## Downstream MCP write registry
 
 `mcp-server/travel-write.js` mirrors the writable `colMap` field lists in
 `src/app/api/trips/**`. When a migration or route change adds a writable column, update
-that registry too, or Claude's travel write tools will reject the new field as unknown.
+that registry too, or Claude's travel write tools will reject the new field as unknown. The derived trip geocode columns (latitude, longitude, esolvedName) are deliberately excluded from TRIP_FIELDS.

@@ -86,7 +86,6 @@ export default function NewTripPage() {
         title="New Trip"
         backHref="/trips"
         backLabel="Trips"
-        activeLocalNav="new"
         contentClassName="max-w-lg"
       >
         <p className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
@@ -102,7 +101,6 @@ export default function NewTripPage() {
       subtitle="Create the itinerary shell before adding bookings"
       backHref="/trips"
       backLabel="Trips"
-      activeLocalNav="new"
       contentClassName="max-w-lg"
     >
       <form onSubmit={handleSubmit} className="space-y-5 rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">

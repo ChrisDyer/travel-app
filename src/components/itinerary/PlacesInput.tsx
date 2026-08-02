@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 import { Input } from '@/components/ui/input';
+import { googleMapsLibraries } from '@/lib/google-maps';
 
 interface PlacesInputProps {
   id?: string;
@@ -15,7 +16,6 @@ interface PlacesInputProps {
   required?: boolean;
 }
 
-const libraries: ('places')[] = ['places'];
 
 export function PlacesInput({ id, name, value, defaultValue, onChange, placeholder, className, required }: PlacesInputProps) {
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -23,7 +23,7 @@ export function PlacesInput({ id, name, value, defaultValue, onChange, placehold
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
-    libraries,
+    libraries: googleMapsLibraries,
   });
 
   function onPlaceChanged() {

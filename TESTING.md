@@ -292,3 +292,40 @@ Manual test cases for the travel itinerary app before going live.
 - [ ] Trip with 10 days, 5+ items per day → page load under 2 seconds
 - [ ] Large packing list (50+ items) → no perceptible lag when checking/unchecking
 - [ ] Trip map with 20+ markers → renders without timeout
+
+## App-Level Overview
+
+- [ ] `/travel/` renders Overview without a redirect and highlights Overview in nav.
+- [ ] Hero shows the soonest trip whose `end_date >= today`, with cover fallback and timing from `tripTiming()`.
+- [ ] If the hero trip is in progress, today's events appear in itinerary order.
+- [ ] Weather matches `/travel/trips/{id}` for the same trip.
+- [ ] Cancellation, Needs booking, and Nothing planned rows link to the correct trips.
+- [ ] Walk-up activities and hikes are absent from Needs booking.
+- [ ] No upcoming trips -> empty state; read-only hides Plan a trip.
+
+## App-Level Map
+
+- [ ] `/travel/map` plots cached trip pins and cached leg stops; ended trips are grey and current/upcoming trips are blue.
+- [ ] InfoWindow links open the right trip, and side-list clicks pan/open the matching pin.
+- [ ] All / Upcoming / Past filters apply to both pins and list.
+- [ ] Change a trip destination -> geocode cache clears; reload Map -> pin moves.
+- [ ] Reopen Map with cached coordinates -> no repeat geocoding for those trips.
+- [ ] No `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` -> unavailable panel appears and side list still renders.
+
+## App-Level Settings
+
+- [ ] `/travel/settings` renders Gmail, Access, Integrations, and Data cards and highlights Settings only there.
+- [ ] Gmail connected/expired/not-connected states show scope, dates, refresh-token boolean, and label `Trip Bookings`.
+- [ ] DOM/source never includes access_token or refresh_token values.
+- [ ] Connect returns to `/travel/settings`; `?gmailError=` displays a visible error.
+- [ ] Disconnect returns 204 and is idempotent; read-only hides buttons and direct DELETE returns 403 `read_only`.
+- [ ] Integration rows show configured/missing booleans without key values.
+- [ ] Per-trip `.ics` export links download usable calendar files.
+
+## App-Level Navigation
+
+- [ ] Desktop nav highlights `/`, `/trips`, `/trips/new`, `/trips/{id}`, `/map`, and `/settings` correctly.
+- [ ] On 375px, the mobile drawer opens, navigates, closes after link click, and sits above trip-page sticky tabs.
+- [ ] Escape and backdrop click close the drawer and focus returns to the trigger.
+- [ ] Read-only users do not see New trip in desktop nav or drawer.
+- [ ] `/travel/trips/{id}/print` has no shell, app switcher, or drawer trigger.

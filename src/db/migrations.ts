@@ -263,6 +263,14 @@ const migrations = [
       CREATE INDEX IF NOT EXISTS idx_trip_legs_trip ON trip_legs (trip_id, start_date);
     `,
   },
+  {
+    name: '008_trip_geocode',
+    sql: `
+      ALTER TABLE trips ADD COLUMN latitude REAL;
+      ALTER TABLE trips ADD COLUMN longitude REAL;
+      ALTER TABLE trips ADD COLUMN resolved_name TEXT;
+    `,
+  },
 ];
 
 function addColumnIfMissing(db: Database.Database, table: string, column: string, definition: string): void {
@@ -290,6 +298,12 @@ function runCustomMigration(db: Database.Database, name: string): boolean {
     addColumnIfMissing(db, 'trips', 'planning_notes_previous', 'TEXT');
     addColumnIfMissing(db, 'trips', 'planning_notes_updated_at', 'TEXT');
     addColumnIfMissing(db, 'trips', 'planning_notes_updated_by', 'TEXT');
+    return true;
+  }
+  if (name === '008_trip_geocode') {
+    addColumnIfMissing(db, 'trips', 'latitude', 'REAL');
+    addColumnIfMissing(db, 'trips', 'longitude', 'REAL');
+    addColumnIfMissing(db, 'trips', 'resolved_name', 'TEXT');
     return true;
   }
   return false;

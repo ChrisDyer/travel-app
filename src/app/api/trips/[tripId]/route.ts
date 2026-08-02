@@ -18,8 +18,8 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: { pa
   const userId = getUserId(request);
   const body = await request.json();
 
-  const before = db.prepare('SELECT start_date, end_date FROM trips WHERE id = ? AND user_id = ?')
-    .get(tripId, userId) as { start_date: string; end_date: string } | undefined;
+  const before = db.prepare('SELECT start_date, end_date, destination FROM trips WHERE id = ? AND user_id = ?')
+    .get(tripId, userId) as { start_date: string; end_date: string; destination: string } | undefined;
   if (!before) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   // Build SET clause dynamically from body keys.
@@ -41,6 +41,13 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: { pa
       setClauses.push(`${col} = ?`);
       values.push(typeof val === 'boolean' ? (val ? 1 : 0) : val);
     }
+  }
+
+  if (typeof body.destination === 'string' && body.destination !== before.destination) {
+    // Changing the destination invalidates the cached geocode. Clearing these in the same UPDATE
+    // is what stops the map pin sitting on the old city under the new city's label.
+    // See docs/app-pages/00-overview.md, rule 1.
+    setClauses.push('latitude = NULL', 'longitude = NULL', 'resolved_name = NULL');
   }
   values.push(tripId, userId);
 

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useJsApiLoader, GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { X } from 'lucide-react';
+import { googleMapsLibraries } from '@/lib/google-maps';
 
 export interface MapLocation {
   title: string;
@@ -24,7 +25,6 @@ const typeIcon: Record<MapLocation['type'], string> = {
   rental: '🚗',
 };
 
-const libraries: ('places')[] = ['places'];
 const mapContainerStyle = { width: '100%', height: '500px' };
 const defaultCenter = { lat: 39.8283, lng: -98.5795 };
 
@@ -44,7 +44,7 @@ export function TripMap({ locations, activeLocations, selectedDate, onClear }: T
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: apiKey,
-    libraries,
+    libraries: googleMapsLibraries,
   });
 
   const fitPins = useCallback((newPins: GeocodedLocation[]) => {

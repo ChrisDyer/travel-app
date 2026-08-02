@@ -3,6 +3,7 @@ import { db, camelize, camelizeAll } from '@/db';
 import { getUserId } from '@/lib/auth';
 import { datesBetween } from '@/lib/dates';
 import { segmentDates } from '@/lib/legs';
+import { geocodePlace } from '@/lib/geocode';
 import type { Trip, TripLeg } from '@/types/travel';
 
 interface WeatherDay {
@@ -31,19 +32,6 @@ function maxForecastDate(): string {
   return new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10);
 }
 
-function displayName(place: { name: string; country?: string }): string {
-  return place.country ? `${place.name}, ${place.country}` : place.name;
-}
-
-async function geocode(placeName: string): Promise<{ latitude: number; longitude: number; name: string } | null> {
-  const geoRes = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(placeName)}&count=1`,
-    { signal: AbortSignal.timeout(5000) }
-  );
-  const geo = await geoRes.json() as { results?: { name: string; country?: string; latitude: number; longitude: number }[] };
-  const place = geo.results?.[0];
-  return place ? { latitude: place.latitude, longitude: place.longitude, name: displayName(place) } : null;
-}
 
 function getCachedForecast(key: string): WeatherDay[] | null {
   const entry = forecastCache.get(key);
@@ -129,7 +117,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ trip
       let location = group.leg?.resolvedName ?? null;
 
       if (latitude == null || longitude == null) {
-        const resolved = await geocode(group.leg?.place ?? group.place);
+        const resolved = await geocodePlace(group.leg?.place ?? group.place);
         if (!resolved) {
           segments.push({ place: group.place, location: null, startDate: group.dates[0], endDate: group.dates.at(-1)!, reason: 'location_not_found', days: [] });
           continue;

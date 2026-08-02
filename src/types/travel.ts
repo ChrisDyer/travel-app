@@ -29,6 +29,11 @@ export interface Trip {
   planningNotesPrevious: string | null;
   planningNotesUpdatedAt: string | null;
   planningNotesUpdatedBy: 'you' | 'assistant' | null;
+  /** Cached geocode of destination. NULL until first resolved, or after destination changes. */
+  latitude: number | null;
+  longitude: number | null;
+  /** Geocoder display name, e.g. 'Paris, France'. Written only by GET /api/map. */
+  resolvedName: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }

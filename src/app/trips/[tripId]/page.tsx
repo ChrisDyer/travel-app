@@ -37,7 +37,6 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
       subtitle={subtitle}
       backHref="/trips"
       backLabel="Trips"
-      activeLocalNav="trips"
       actions={
         <>
           <span className={`hidden rounded-full px-2.5 py-1 text-xs font-medium capitalize sm:inline-flex ${statusColors[trip.status] ?? statusColors.planning}`}>
