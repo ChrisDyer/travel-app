@@ -31,15 +31,15 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     INSERT INTO trip_parking (
       id, trip_id, location, address, level, start_date, start_time, end_date, end_time,
       confirmation_number, order_number, vendor, booking_status, cost, currency, notes,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      hide_from_calendar, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `).get(
     id, tripId, body.location, body.address ?? null, body.level ?? null,
     body.startDate ?? null, body.startTime ?? null, body.endDate ?? null, body.endTime ?? null,
     body.confirmationNumber ?? null, body.orderNumber ?? null, body.vendor ?? null,
     body.bookingStatus ?? 'unbooked', body.cost ?? null, body.currency ?? null,
-    body.notes ?? null, now, now
+    body.notes ?? null, body.hideFromCalendar ?? 0, now, now
   ) as Record<string, unknown>;
 
   return NextResponse.json(camelize<TripParking>(spot), { status: 201 });

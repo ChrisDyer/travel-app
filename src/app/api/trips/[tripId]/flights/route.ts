@@ -30,8 +30,9 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
       departure_date, departure_time, arrival_date, arrival_time, confirmation_number, seats,
       return_flight_number, return_departure_date, return_departure_time, return_arrival_date,
       return_arrival_time, return_confirmation_number, return_seats,
-      booking_status, cancellation_policy, cost, currency, notes, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      booking_status, cancellation_policy, cost, currency, notes, hide_from_calendar,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `).get(
     id, tripId, body.tripType ?? 'one-way', body.airline ?? null, body.flightNumber ?? null,
@@ -42,7 +43,7 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     body.returnArrivalDate ?? null, body.returnArrivalTime ?? null,
     body.returnConfirmationNumber ?? null, body.returnSeats ?? null,
     body.bookingStatus ?? 'unbooked', body.cancellationPolicy ?? null,
-    body.cost ?? null, body.currency ?? null, body.notes ?? null, now, now
+    body.cost ?? null, body.currency ?? null, body.notes ?? null, body.hideFromCalendar ?? 0, now, now
   ) as Record<string, unknown>;
 
   return NextResponse.json(camelize<TripFlight>(flight), { status: 201 });

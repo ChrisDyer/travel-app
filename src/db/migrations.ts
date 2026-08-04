@@ -271,6 +271,55 @@ const migrations = [
       ALTER TABLE trips ADD COLUMN resolved_name TEXT;
     `,
   },
+  {
+    // CREATE-only, so no runCustomMigration branch: IF NOT EXISTS is already idempotent
+    // (same idiom as 003_cover_images and 007_trip_legs). No seed row either — generating a
+    // token needs node:crypto and this file has never generated data. ensureFeed() inserts
+    // lazily on first use.
+    name: '009_calendar_feed',
+    sql: `
+      -- Subscribe-able ICS feeds. One row today (slug 'shared'); the (user_id, slug) unique
+      -- index means a second feed needs no migration, only a new row.
+      CREATE TABLE IF NOT EXISTS calendar_feeds (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        slug TEXT NOT NULL DEFAULT 'shared',
+        name TEXT NOT NULL DEFAULT 'Zo Travel',
+        -- The ONLY credential. 32 random bytes, base64url. Rotating it revokes every
+        -- subscription: the old URL 404s and subscribers' copies stop updating.
+        token TEXT NOT NULL,
+        -- One JSON object; parseFeedFilters() in src/lib/calendar/filters.ts owns the schema,
+        -- the defaults, and the tolerance for unknown/missing keys.
+        filters TEXT NOT NULL DEFAULT '{}',
+        last_fetched_at TEXT,
+        last_fetched_user_agent TEXT,
+        token_rotated_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_feeds_token ON calendar_feeds (token);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_feeds_user_slug ON calendar_feeds (user_id, slug);
+    `,
+  },
+  {
+    name: '010_hide_from_calendar',
+    sql: `
+      ALTER TABLE trips            ADD COLUMN hide_from_calendar INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE trip_events      ADD COLUMN hide_from_calendar INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE trip_flights     ADD COLUMN hide_from_calendar INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE trip_hotels      ADD COLUMN hide_from_calendar INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE trip_rental_cars ADD COLUMN hide_from_calendar INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE trip_parking     ADD COLUMN hide_from_calendar INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE trip_transit     ADD COLUMN hide_from_calendar INTEGER NOT NULL DEFAULT 0;
+    `,
+  },
+];
+
+/** Tables carrying hide_from_calendar. Shared by migration 010 and the normalizer's contract. */
+const HIDE_FROM_CALENDAR_TABLES = [
+  'trips', 'trip_events', 'trip_flights', 'trip_hotels',
+  'trip_rental_cars', 'trip_parking', 'trip_transit',
 ];
 
 function addColumnIfMissing(db: Database.Database, table: string, column: string, definition: string): void {
@@ -304,6 +353,15 @@ function runCustomMigration(db: Database.Database, name: string): boolean {
     addColumnIfMissing(db, 'trips', 'latitude', 'REAL');
     addColumnIfMissing(db, 'trips', 'longitude', 'REAL');
     addColumnIfMissing(db, 'trips', 'resolved_name', 'TEXT');
+    return true;
+  }
+  if (name === '010_hide_from_calendar') {
+    // Global "never put this on a calendar" flag, not per-feed: a hidden item is hidden
+    // from every feed AND from the per-trip .ics download. The trips column cascades — a
+    // hidden trip hides its span event and every item beneath it.
+    for (const table of HIDE_FROM_CALENDAR_TABLES) {
+      addColumnIfMissing(db, table, 'hide_from_calendar', 'INTEGER NOT NULL DEFAULT 0');
+    }
     return true;
   }
   return false;

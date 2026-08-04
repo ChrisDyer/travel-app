@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { TripDay, TripEvent, TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit } from '@/types/travel';
 import { BookingRef, BookingKind } from './booking-selection';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
@@ -9,6 +10,7 @@ import { BrandLogo } from './BrandLogo';
 import { BookingStatusBadge, NoBookingBadge } from './BookingStatusBadge';
 import { apiUrl } from '@/lib/api';
 import { skipsBooking } from '@/lib/bookings';
+import { useReadOnly } from '@/lib/read-only';
 import { getMapsUrl } from '@/lib/maps';
 import { fmt12, fmtShortDate } from '@/lib/dates';
 import { toast } from '@/components/ui/toast';
@@ -46,7 +48,8 @@ function logoName(title: string): string {
   return title;
 }
 
-const deleteEndpoint: Record<BookingKind, (tripId: string, id: string) => string> = {
+/** One item's REST path. DELETE and PATCH share it. */
+const itemEndpoint: Record<BookingKind, (tripId: string, id: string) => string> = {
   flight: (t, id) => `/api/trips/${t}/flights/${id}`,
   hotel: (t, id) => `/api/trips/${t}/hotels/${id}`,
   parking: (t, id) => `/api/trips/${t}/parking-bookings/${id}`,
@@ -131,8 +134,22 @@ function Rows({ rows }: { rows: Row[] }) {
 export function BookingDetailSheet({
   tripId, selection, flights, hotels, parking, rentalCars, transit, events, days, onClose, onEdit, onDeleted,
 }: BookingDetailSheetProps) {
+  const readOnly = useReadOnly();
+  const router = useRouter();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [hidingSaving, setHidingSaving] = useState(false);
+
+  /** The selected row, whichever collection it lives in — used only for hide_from_calendar. */
+  const collections: Record<BookingKind, { id: string; hideFromCalendar: number }[]> = {
+    flight: flights, hotel: hotels, parking, rentalCar: rentalCars, transit, event: events,
+  };
+  const storedHidden = selection
+    ? Boolean(collections[selection.kind].find((x) => x.id === selection.id)?.hideFromCalendar)
+    : false;
+  // Held locally so the checkbox responds immediately; the parent's cached list may lag until
+  // router.refresh() lands, and the DB is authoritative either way.
+  const [hidden, setHidden] = useState(storedHidden);
 
   // Reset the delete-confirm step whenever the selection changes, without an effect
   // (see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
@@ -141,13 +158,35 @@ export function BookingDetailSheet({
   if (selectionKey !== prevSelectionKey) {
     setPrevSelectionKey(selectionKey);
     setConfirmDelete(false);
+    setHidden(storedHidden);
+  }
+
+  async function toggleHidden(next: boolean) {
+    if (!selection) return;
+    setHidden(next);           // optimistic
+    setHidingSaving(true);
+    try {
+      const res = await fetch(apiUrl(itemEndpoint[selection.kind](tripId, selection.id)), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hideFromCalendar: next ? 1 : 0 }),
+      });
+      if (!res.ok) throw new Error();
+      toast(next ? 'Hidden from calendar feeds' : 'Showing on calendar feeds');
+      router.refresh();
+    } catch {
+      setHidden(!next);        // roll back
+      toast('Could not update the calendar setting.', 'error');
+    } finally {
+      setHidingSaving(false);
+    }
   }
 
   async function handleDelete() {
     if (!selection) return;
     setDeleting(true);
     try {
-      const res = await fetch(apiUrl(deleteEndpoint[selection.kind](tripId, selection.id)), { method: 'DELETE' });
+      const res = await fetch(apiUrl(itemEndpoint[selection.kind](tripId, selection.id)), { method: 'DELETE' });
       if (!res.ok) throw new Error();
       onDeleted(selection);
     } catch {
@@ -402,6 +441,28 @@ export function BookingDetailSheet({
           </SheetHeader>
 
           {sections.map((rows, i) => <Rows key={i} rows={rows} />)}
+
+          {/* Hidden for read-only users, following TripAssistant/AddPlanMenu — deliberately
+              NOT the DaySection pattern, which leaves editors visible and lets the write 403. */}
+          {!readOnly && (
+            <div className="mt-4 border-t border-stone-200 pt-4">
+              <label className="flex items-start gap-2 text-sm text-stone-700">
+                <input
+                  type="checkbox"
+                  checked={hidden}
+                  disabled={hidingSaving}
+                  onChange={(e) => toggleHidden(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 accent-blue-600"
+                />
+                <span>
+                  Hide from all calendar feeds
+                  <span className="block text-xs text-stone-500">
+                    Keeps this off every subscribed calendar, for everyone. It stays in the itinerary.
+                  </span>
+                </span>
+              </label>
+            </div>
+          )}
 
           <SheetFooter>
             <Button variant="default" onClick={() => onEdit(selection)}>Edit</Button>

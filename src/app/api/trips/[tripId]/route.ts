@@ -32,6 +32,7 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: { pa
     status: 'status', coverImageUrl: 'cover_image_url', travelers: 'travelers', notes: 'notes',
     travelMode: 'travel_mode', rentalCarNeeded: 'rental_car_needed', digestEnabled: 'digest_enabled',
     digestDayOfWeek: 'digest_day_of_week', budget: 'budget', budgetCurrency: 'budget_currency',
+    hideFromCalendar: 'hide_from_calendar',
   };
   const setClauses: string[] = ['updated_at = ?'];
   const values: unknown[] = [new Date().toISOString()];

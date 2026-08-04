@@ -32,8 +32,8 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
       id, trip_id, name, address, location_url, check_in_date, check_in_time,
       check_out_date, check_out_time, confirmation_number, room_type, amenities,
       booking_status, cancellation_policy, cancellation_deadline, cost, currency, notes,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      hide_from_calendar, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `).get(
     id, tripId, body.name, body.address ?? null, body.locationUrl ?? null,
@@ -42,7 +42,7 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     body.confirmationNumber ?? null, body.roomType ?? null, body.amenities ?? null,
     body.bookingStatus ?? 'unbooked', body.cancellationPolicy ?? null,
     body.cancellationDeadline ?? null, body.cost ?? null, body.currency ?? null,
-    body.notes ?? null, now, now
+    body.notes ?? null, body.hideFromCalendar ?? 0, now, now
   ) as Record<string, unknown>;
 
   return NextResponse.json(camelize<TripHotel>(hotel), { status: 201 });

@@ -32,8 +32,8 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
       id, trip_id, company, car_class, confirmation_number,
       pickup_date, pickup_time, pickup_location, dropoff_date, dropoff_time, dropoff_location,
       driver_name, booking_status, cancellation_policy, cost, currency, notes,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      hide_from_calendar, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `).get(
     id, tripId, body.company, body.carClass ?? null, body.confirmationNumber ?? null,
@@ -41,7 +41,7 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     body.dropoffDate ?? null, body.dropoffTime ?? null, body.dropoffLocation ?? null,
     body.driverName ?? null, body.bookingStatus ?? 'unbooked',
     body.cancellationPolicy ?? null, body.cost ?? null, body.currency ?? null,
-    body.notes ?? null, now, now
+    body.notes ?? null, body.hideFromCalendar ?? 0, now, now
   ) as Record<string, unknown>;
 
   return NextResponse.json(camelize<TripRentalCar>(car), { status: 201 });

@@ -81,6 +81,61 @@ A trip leg is one stay within a trip: `trip_legs.place` plus an inclusive `start
 - **Place changes invalidate geocodes.** Any path that changes `trip_legs.place` must clear `latitude`, `longitude`, and `resolved_name` in the same write. The PATCH route enforces this; the weather route is the only code that fills those derived cache columns.
 - **Leg writes never bump `trips.updated_at`.** The trip page keys `<ItineraryDocument>` by `trip.updatedAt`; changing it remounts the client tree and drops open panels/forms. Weather refreshes through `legsVersion` (`MAX(trip_legs.updated_at)` in `src/app/trips/[tripId]/page.tsx`) plus `router.refresh()` after successful leg edits.
 - Overlaps, gaps, and legs outside the trip range are deliberately legal. The editor warns about them but does not block saving. Only reversed ranges (`endDate < startDate`) are rejected.
+## Calendar feed
+
+A subscribe-able ICS feed at `/api/calendar/feed/{token}.ics` that Chris and Kate each add to
+their own Google Calendar via "From URL". It replaced a Google OAuth push-sync design (see
+`docs/calendar-sync/`, superseded) because a feed gives each person their own subscription with
+no OAuth, no token refresh and no drift reconciliation. Full design in `docs/calendar-feed/`.
+
+- **One shared feed, many subscribers, one view.** `calendar_feeds` is row-per-feed and the
+  `(user_id, slug)` unique index means a second feed needs only a new row — but the UI offers
+  exactly one, so everyone subscribed sees the same filtered view. Per-subscriber feeds were
+  considered and deliberately declined.
+- **The token in the path is the whole credential.** `/api/calendar/feed/` is the single entry in
+  `PUBLIC_PATH_PREFIXES` in `src/proxy.ts` and is bypassed at Cloudflare Access (`RUNBOOK.md`
+  §12a). That is safe only because the route file exports **nothing but `GET`** — Next answers
+  405 to everything else, so the bypass has no write path to open. Never add another method to
+  that file, and never widen the prefix. Feed management lives at `/api/calendar/config`,
+  deliberately outside the prefix so it stays behind Access and the `ADMIN_EMAILS` write gate.
+- **Rotation is the only revocation, and it breaks every subscription.** The old URL 404s and
+  each subscriber's calendar silently freezes at its last successful fetch — Google does not
+  delete a calendar that stops resolving. Everyone must delete and re-add.
+- **Narrowing a filter deletes events from every subscribed calendar.** The feed body *is* the
+  state; Google replaces the whole calendar on each poll. There is no "unpublish just for me".
+- **Booking details are withheld by default.** `includeBookingDetails` defaults to `false` and
+  `redactItems()` drops the whole `DESCRIPTION` — not a pattern-match, because card fragments and
+  loyalty numbers live in hand-written `notes` and a redactor that is 90% right on secrets is
+  worse than useless. `EXPORT_PRESET` sets it `true`: the per-trip download is authenticated and
+  goes to your own machine, so the reasoning does not apply there. Both callers go through the
+  single `prepareItems()` (filter **and** redact) — a route that called `filterItems` alone would
+  silently publish confirmation numbers to a public URL.
+- **`hide_from_calendar` is global, not per-feed**, on seven tables including `trips`. A hidden
+  item is hidden from every feed *and* from the per-trip download; the trip-level column cascades
+  to everything beneath it. It is not a per-person control.
+- **`src/lib/calendar/filters.ts` owns the only predicate (`includeItem`) and the only filter
+  validator (`parseFeedFilters`).** Do not add a Zod schema beside it and do not re-test these
+  columns inline anywhere else. `DEFAULT_FILTERS` and its arrays are frozen, and
+  `parseFeedFilters` returns fresh arrays, because the settings UI and management API both
+  parse-then-modify.
+- **Hikes carry `bookingStatus: null` into the feed on purpose** (the app never shows a status for
+  one), so a feed set to "confirmed only" does not silently drop every hike. A hike is governed
+  only by the `hike` checkbox in `eventCategories`.
+- **An event whose category is outside `EventCategory` fails open** and is included. The settings
+  UI renders one checkbox per known category, so an unknown one has no checkbox and could never
+  be switched back on; a real booked event silently missing from a calendar is the worse failure.
+  There is a live `'sports'` row that this rule rescues.
+- **`ics.ts`, `filters.ts` and `token.ts` must stay free of runtime imports** (type-only is fine)
+  so `node --test` can load them — it resolves neither the `@/` alias nor extensionless relative
+  imports. `token.ts` is separate from `filters.ts` so the client component can import filter
+  types without dragging `node:crypto` into the browser bundle.
+- **`fold()` measures octets, not JavaScript string length**, and walks whole code points. Em
+  dashes and the emoji summary prefixes make those differ; the old length-based version emitted
+  over-long lines and could split a surrogate pair.
+- **`DTSTAMP`/`LAST-MODIFIED` come from each row's `updated_at`, never `now`**, so two fetches with
+  no edits are byte-identical. `X-WR-TIMEZONE` is deliberately absent — every time is floating
+  local, so "7pm dinner" shows at 7pm wherever you are.
+
 ## Plan folders
 
 New multi-phase plans go under `docs/<slug>/` (see `docs/redesign`, `docs/fixes`,
@@ -112,3 +167,8 @@ keys `<ItineraryDocument>` by that value.
 `mcp-server/travel-write.js` mirrors the writable `colMap` field lists in
 `src/app/api/trips/**`. When a migration or route change adds a writable column, update
 that registry too, or Claude's travel write tools will reject the new field as unknown. The derived trip geocode columns (latitude, longitude, esolvedName) are deliberately excluded from TRIP_FIELDS.
+
+`hideFromCalendar` is registered there — in `TRIP_FIELDS.fields` and in the `fields` of the
+`event`, `flight`, `hotel`, `rental_car`, `parking` and `transit` kinds — so Claude can hide an
+item from the calendar feed. `calendar_feeds` is deliberately **not** exposed: feed configuration
+is not a trip write.

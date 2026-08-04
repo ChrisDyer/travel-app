@@ -20,6 +20,7 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: Para
     arrivalDate: 'arrival_date', arrivalTime: 'arrival_time',
     confirmationNumber: 'confirmation_number', seatInfo: 'seat_info',
     bookingStatus: 'booking_status', cost: 'cost', currency: 'currency', notes: 'notes',
+    hideFromCalendar: 'hide_from_calendar',
   };
   const setClauses: string[] = ['updated_at = ?'];
   const values: unknown[] = [new Date().toISOString()];

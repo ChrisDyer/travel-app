@@ -322,6 +322,23 @@ Manual test cases for the travel itinerary app before going live.
 - [ ] Integration rows show configured/missing booleans without key values.
 - [ ] Per-trip `.ics` export links download usable calendar files.
 
+## Calendar Feed
+
+- [ ] A good token returns 200 `text/calendar`; the `.ics` suffix is optional and both forms give the same body.
+- [ ] A bad, malformed, or rotated-away token returns a bare 404 `text/plain` — never 403, and never a different body for "wrong token" vs "no such feed".
+- [ ] `POST`/`PUT`/`PATCH`/`DELETE` on the feed URL return 405.
+- [ ] With no Cloudflare Access header the feed is served, while `/travel/settings` still returns 403 (dev) / 302 to Access (production).
+- [ ] A read-only user sees the Calendar feed card and its count, but view-source contains no token and no feed URL, and no Copy/Save/Rotate controls.
+- [ ] Two fetches with no edits in between are byte-identical, and every UID is unchanged across them.
+- [ ] Booking details are absent by default: no `DESCRIPTION`, no `Conf:`, no card fragments — while `SUMMARY` and `LOCATION` remain. Turning "Publish confirmation numbers and notes" on restores them.
+- [ ] The per-trip `.ics` download still includes descriptions and confirmation numbers (it is authenticated and local).
+- [ ] An item with "Hide from all calendar feeds" ticked is absent from both the feed and the per-trip download; unticking restores it. Hiding a whole trip removes its span and everything beneath it.
+- [ ] Unchecking a category and saving removes those events from an already-subscribed calendar within Google's poll window (up to 24h).
+- [ ] Emptying "What to include" leaves exactly one placeholder VEVENT, not an empty calendar, and still validates.
+- [ ] Malformed filter payloads never 500 — the route answers 200 with defaults applied, and genuinely invalid JSON gives 400.
+- [ ] Rotating the token 404s the old URL, 200s the new one, and leaves the filters intact.
+- [ ] Floating times render at the same wall-clock in a calendar set to a different timezone (a 7pm dinner shows at 7pm).
+
 ## App-Level Navigation
 
 - [ ] Desktop nav highlights `/`, `/trips`, `/trips/new`, `/trips/{id}`, `/map`, and `/settings` correctly.

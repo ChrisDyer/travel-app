@@ -19,6 +19,7 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: Para
     dropoffDate: 'dropoff_date', dropoffTime: 'dropoff_time', dropoffLocation: 'dropoff_location',
     driverName: 'driver_name', bookingStatus: 'booking_status',
     cancellationPolicy: 'cancellation_policy', cost: 'cost', currency: 'currency', notes: 'notes',
+    hideFromCalendar: 'hide_from_calendar',
   };
   const setClauses: string[] = ['updated_at = ?'];
   const values: unknown[] = [new Date().toISOString()];

@@ -34,6 +34,9 @@ export interface Trip {
   longitude: number | null;
   /** Geocoder display name, e.g. 'Paris, France'. Written only by GET /api/map. */
   resolvedName: string | null;
+  /** Keep this whole trip off every calendar feed and the .ics download. Cascades to its
+   *  events, flights, hotels, cars, parking and transit. Stored 0/1. */
+  hideFromCalendar: number;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -95,6 +98,8 @@ export interface TripEvent {
   // truthy; always 1 for other categories. See src/lib/bookings.ts.
   takesReservations: boolean;
   partySize: number | null;     // restaurant only
+  /** Keep this item off every calendar feed and the .ics download. Stored 0/1. */
+  hideFromCalendar: number;
   sortOrder: number;
   notes: string | null;
   createdAt: Date | string;
@@ -129,6 +134,8 @@ export interface TripFlight {
   cost: number | null;
   currency: string | null;
   notes: string | null;
+  /** Keep this item off every calendar feed and the .ics download. Stored 0/1. */
+  hideFromCalendar: number;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -150,6 +157,8 @@ export interface TripParking {
   cost: number | null;
   currency: string | null;
   notes: string | null;
+  /** Keep this item off every calendar feed and the .ics download. Stored 0/1. */
+  hideFromCalendar: number;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -173,6 +182,8 @@ export interface TripHotel {
   cost: number | null;
   currency: string | null;
   notes: string | null;
+  /** Keep this item off every calendar feed and the .ics download. Stored 0/1. */
+  hideFromCalendar: number;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -195,6 +206,8 @@ export interface TripRentalCar {
   cost: number | null;
   currency: string | null;
   notes: string | null;
+  /** Keep this item off every calendar feed and the .ics download. Stored 0/1. */
+  hideFromCalendar: number;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -219,6 +232,8 @@ export interface TripTransit {
   cost: number | null;
   currency: string | null;
   notes: string | null;
+  /** Keep this item off every calendar feed and the .ics download. Stored 0/1. */
+  hideFromCalendar: number;
   createdAt: Date | string;
   updatedAt: Date | string;
 }

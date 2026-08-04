@@ -1,7 +1,13 @@
-import { AlertCircle, CheckCircle2, Cloud, Database, KeyRound, Mail, ShieldCheck } from 'lucide-react';
+import { headers } from 'next/headers';
+import { AlertCircle, CalendarDays, CheckCircle2, Cloud, Database, KeyRound, Mail, ShieldCheck } from 'lucide-react';
 import { db } from '@/db';
 import { TravelShell } from '@/appShell/TravelShell';
 import { GmailActions } from '@/components/settings/GmailActions';
+import { CalendarFeedActions } from '@/components/settings/CalendarFeedActions';
+import { ensureFeed } from '@/lib/calendar/feeds';
+import { parseFeedFilters, filterItems } from '@/lib/calendar/filters';
+import { buildCalendarItems } from '@/lib/calendar/items';
+import { localToday } from '@/lib/trip-status';
 import { apiUrl } from '@/lib/api';
 import { getAccessInfo, getServerUserId } from '@/lib/auth';
 import type { Trip } from '@/types/travel';
@@ -18,9 +24,9 @@ type SettingsPageProps = {
   searchParams: Promise<{ gmailError?: string }>;
 };
 
-function Card({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Card({ title, icon, children, className = '' }: { title: string; icon: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <section className={`rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6 ${className}`}>
       <div className="mb-4 flex items-center gap-2">
         {icon}
         <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
@@ -75,6 +81,22 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   `).get(userId, userId, userId, userId) as { trips: number; events: number; flights: number; hotels: number };
   const trips = db.prepare('SELECT id, title, destination, start_date AS startDate, end_date AS endDate FROM trips WHERE user_id = ? ORDER BY start_date ASC').all(userId) as Pick<Trip, 'id' | 'title' | 'destination' | 'startDate' | 'endDate'>[];
 
+  // Calendar feed. ensureFeed is lazy — this page is its first caller in normal use.
+  const feed = ensureFeed(userId);
+  const feedFilters = parseFeedFilters(feed.filters);
+  const feedItems = buildCalendarItems({ userId });
+  const feedIncluded = filterItems(feedItems, feedFilters, localToday());
+
+  // Built from the forwarded headers nginx sets, which is reliable where request.url is not
+  // (behind nginx that resolves to the internal bind address). Deliberately NOT
+  // NEXT_PUBLIC_APP_URL: that is pinned to the legacy travel.zo-bot.com, which 301s
+  // cross-hostname into a DIFFERENT Cloudflare Access application. Server-side construction
+  // also avoids a hydration flash of the wrong origin.
+  const hdrs = await headers();
+  const proto = hdrs.get('x-forwarded-proto') ?? 'http';
+  const origin = `${proto}://${hdrs.get('host') ?? 'localhost:3000'}`;
+  const feedUrl = `${origin}${apiUrl(`/api/calendar/feed/${feed.token}.ics`)}`;
+
   const integrations = [
     { name: 'Google Maps', ok: Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY), detail: 'Trip Map page, Places autocomplete' },
     { name: 'Claude', ok: Boolean(process.env.ANTHROPIC_API_KEY), detail: 'Trip assistant and packing suggestions' },
@@ -103,6 +125,28 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             </div>
             <GmailActions connected={gmailConnected} />
           </div>
+        </Card>
+
+        <Card title="Calendar feed" icon={<CalendarDays className="h-5 w-5 text-blue-600" aria-hidden="true" />} className="lg:col-span-2">
+          <div className="space-y-2 text-sm text-slate-600">
+            <StatusPill ok={feedIncluded.length > 0} label={`${feedIncluded.length} of ${feedItems.length} items included`} />
+            <p>
+              Last fetched:{' '}
+              <span className="font-medium text-slate-900">
+                {feed.lastFetchedAt ? fmtDate(feed.lastFetchedAt) : 'never fetched yet'}
+              </span>
+            </p>
+            {!feedFilters.includeBookingDetails && (
+              <p className="text-xs text-slate-500">
+                Confirmation numbers and notes are not published to the feed.
+              </p>
+            )}
+          </div>
+          {/* The feed URL is a bearer credential, so it is passed only inside this branch —
+              hiding the controls client-side would still leave the token in the markup. */}
+          {!access.readOnly && (
+            <CalendarFeedActions feedUrl={feedUrl} name={feed.name} filters={feedFilters} />
+          )}
         </Card>
 
         <Card title="Access" icon={<ShieldCheck className="h-5 w-5 text-blue-600" aria-hidden="true" />}>

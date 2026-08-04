@@ -226,9 +226,98 @@ pm2 save
 
 ### 12. Cloudflare Zero Trust (Access)
 
-The app is now covered by the existing wildcard `*.zo-bot.com` Access policy set up for
-the apex (see root `README.md`) — no separate "Travel App" Access application is needed.
-The `travel` DNS A record (Proxied) can stay; it only carries the redirect-only vhost now.
+The app is served from the apex (`zo-bot.com/travel`), so it is gated by the **dedicated
+`zo-bot.com` apex Access application**, not by the `*.zo-bot.com` wildcard — a wildcard
+does not match the apex in Access. See the Auth gate row in root `README.md`. No separate
+"Travel App" application is needed. The `travel` DNS A record (Proxied) can stay; it only
+carries the redirect-only vhost now.
+
+> Corrected 2026-08-03. This section previously said the app was covered by "the existing
+> wildcard `*.zo-bot.com` Access policy set up for the apex". That described a setup that
+> does not exist, and it matters here: the calendar-feed bypass below has to sit in front
+> of whichever application actually intercepts, and getting that wrong either fails to
+> work or opens more than intended.
+
+To confirm which application intercepts, from a machine or private window with **no Access
+session**:
+
+```bash
+curl -sSI https://zo-bot.com/travel/settings
+```
+
+The `location:` header names the `*.cloudflareaccess.com` host and application id doing
+the intercepting.
+
+### 12a. Cloudflare Access bypass — the calendar feed
+
+The subscribe-able ICS feed at `/travel/api/calendar/feed/<token>.ics` must be reachable
+with no Access session at all. Google's calendar fetcher sends no cookies, no Access JWT
+and no header we control; without a bypass it receives a 302 to
+`<team>.cloudflareaccess.com` and reports only "Could not fetch the URL". The random token
+in the path is the entire credential.
+
+Create a second Access application that wins for that one prefix:
+
+1. `one.dash.cloudflare.com` → account → **Access** → **Applications** → **Add an
+   application** → **Self-hosted**.
+2. **Name:** `Travel calendar feed (public)`. Session duration is irrelevant for a Bypass app.
+3. **Public hostname:** subdomain **empty** (this is the apex), domain `zo-bot.com`, path
+   `travel/api/calendar/feed`. Cloudflare's Path field takes **no leading slash** and matches
+   that segment plus everything below it. If the UI's match preview does not show sub-paths
+   matching, use `travel/api/calendar/feed/*`.
+4. Skip identity providers, App Launcher and appearance — none apply to a Bypass app.
+5. **Policies** → **Add a policy**: name `Public bypass`, **Action: Bypass**, Include:
+   **Everyone**. A Bypass policy cannot be combined with Allow/Block rules in the same
+   application; this app has exactly one policy.
+6. Save.
+
+Access resolves the **most specific** hostname + path match first, so this application wins
+for that prefix and the apex application keeps gating everything else.
+
+**Verify from an un-authenticated machine — never from your own browser:**
+
+```bash
+curl -sSI https://zo-bot.com/travel/api/calendar/feed/<token>.ics
+#   expect: HTTP/2 200, content-type: text/calendar; charset=utf-8
+#   NOT:    302 to https://<team>.cloudflareaccess.com/...
+
+curl -sSI https://zo-bot.com/travel/settings
+#   expect: still 302 to Access   <-- proves the bypass is scoped, not blanket
+
+curl -sSI https://zo-bot.com/travel/api/calendar/feed/deadbeefdeadbeefdeadbeefdeadbeef
+#   expect: HTTP/2 404
+```
+
+The middle one matters as much as the first. If `/travel/settings` stops requiring Access,
+the path pattern is too broad — fix it immediately.
+
+**nginx needs no change.** `location /travel { proxy_pass http://localhost:3001; }` in
+`/etc/nginx/sites-available/homepage` is a prefix match that already covers
+`/travel/api/calendar/feed/...`. Confirm once that no regex `location ~` (which outranks
+prefix matches) would intercept it:
+
+```bash
+ssh chris@91.99.230.234 'grep -n "location" /etc/nginx/sites-available/homepage'
+```
+
+**If curl works but Google still says "Could not fetch the URL":** Google's importer
+identifies as `Mozilla/5.0 (compatible; Google-Calendar-Importer)` and is **not** on
+Cloudflare's verified-bot list, so Bot Fight Mode / Super Bot Fight Mode or Browser
+Integrity Check will challenge it. Add a WAF custom rule — expression
+`http.request.uri.path starts_with "/travel/api/calendar/feed/"`, action **Skip**
+(remaining custom rules, rate limiting, Super Bot Fight Mode, Browser Integrity Check).
+
+If you see staleness rather than failure, add a Cloudflare **Cache Rule** → *Bypass cache*
+on the same prefix. Cloudflare's default cached-extension list does not include `.ics`, so
+this is belt-and-braces, but a stale copy would persist for up to a day and be
+indistinguishable from Google being slow.
+
+> **The token is written to the nginx access log.** It travels in the URL path, and the
+> default `combined` log format records the full path for every request — so each Google
+> poll appends the live credential to a file that rotates into archives and may reach
+> backups. The Node server itself does not log request paths in production. If that
+> retention is unwanted, either exclude this location from `access_log` or give it a log
+> format that omits the path.
 
 ### 13. Google OAuth redirect URI
 
@@ -246,6 +335,10 @@ Unchanged from the original subdomain setup — do not add a new one:
 - Open Trip Assistant → AI responds
 - Open Trip Assistant → Extract from Email → Gmail connect flow works
 - Print page for a trip with flights/hotels — all bookings appear
+- Settings → Calendar feed card shows a URL and an "N of M items included" count
+- `curl -sSI https://zo-bot.com/travel/api/calendar/feed/<token>.ics` from an
+  un-authenticated machine → `200`, `text/calendar`; the same curl against
+  `/travel/settings` still → `302` to Access
 
 ---
 

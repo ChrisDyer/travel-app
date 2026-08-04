@@ -23,7 +23,8 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: Para
     cancellationDeadline: 'cancellation_deadline', hikeDistance: 'hike_distance',
     hikeElevation: 'hike_elevation', trailheadLocation: 'trailhead_location',
     alltrailsUrl: 'alltrails_url', takesReservations: 'takes_reservations',
-    partySize: 'party_size', sortOrder: 'sort_order', notes: 'notes',
+    partySize: 'party_size', hideFromCalendar: 'hide_from_calendar',
+    sortOrder: 'sort_order', notes: 'notes',
   };
   const setClauses: string[] = ['updated_at = ?'];
   const values: unknown[] = [new Date().toISOString()];

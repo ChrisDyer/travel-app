@@ -34,8 +34,8 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
       booking_status, confirmation_number, confirmation_source, source_email_id, booking_url,
       cost, currency, seat_info, vendor, order_number, cancellation_policy, cancellation_deadline,
       hike_distance, hike_elevation, trailhead_location, alltrails_url, takes_reservations, party_size,
-      sort_order, notes, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      hide_from_calendar, sort_order, notes, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `).get(
     id, body.tripDayId, tripId, body.category, body.title,
@@ -45,7 +45,7 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     body.cost ?? null, body.currency ?? null, body.seatInfo ?? null, body.vendor ?? null,
     body.orderNumber ?? null, body.cancellationPolicy ?? null, body.cancellationDeadline ?? null,
     body.hikeDistance ?? null, body.hikeElevation ?? null, body.trailheadLocation ?? null, body.alltrailsUrl ?? null,
-    body.takesReservations ?? 1, body.partySize ?? null,
+    body.takesReservations ?? 1, body.partySize ?? null, body.hideFromCalendar ?? 0,
     body.sortOrder ?? 0, body.notes ?? null, now, now
   ) as Record<string, unknown>;
 

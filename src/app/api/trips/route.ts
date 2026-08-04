@@ -26,6 +26,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     notes = null,
     budget = null,
     budgetCurrency = null,
+    hideFromCalendar = 0,
   } = body;
 
   const id = crypto.randomUUID();
@@ -34,13 +35,13 @@ export const POST = withErrorHandling(async (request: Request) => {
   const trip = db.prepare(`
     INSERT INTO trips (id, user_id, title, destination, start_date, end_date, status,
                        travel_mode, rental_car_needed, travelers, notes, budget, budget_currency,
-                       created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                       hide_from_calendar, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `).get(id, userId, title, destination, startDate, endDate, status,
          travelMode, rentalCarNeeded ? 1 : 0,
          typeof travelers === 'string' ? travelers : JSON.stringify(travelers),
-         notes, budget, budgetCurrency, now, now) as Record<string, unknown>;
+         notes, budget, budgetCurrency, hideFromCalendar ? 1 : 0, now, now) as Record<string, unknown>;
 
   const insertDay = db.prepare(
     'INSERT INTO trip_days (id, trip_id, date, day_number) VALUES (?, ?, ?, ?)'
