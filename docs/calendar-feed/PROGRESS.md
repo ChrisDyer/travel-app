@@ -1,7 +1,8 @@
 # Calendar Feed — Progress
 
-> **Status: Phase 3 complete — settings UI, the per-item hide control, and feed redaction
-> (booking details withheld by default) are in. Next: Phase 4 (deploy, Cloudflare, docs).**
+> **Status: Phase 4 deployed but blocked — code, migrations and docs are live in production; the Cloudflare Access bypass and the two Google subscriptions remain, and only Chris can do them.**
+> Until the Bypass application exists (steps in `RUNBOOK.md` §12a) the feed URL 302s to Access
+> and no calendar can subscribe. Acceptance-test step 7 stays pending until Google first polls.
 > Append one report per completed phase (format below). Never rewrite an earlier
 > phase report; later corrections are new dated entries.
 
@@ -499,3 +500,97 @@ POST route does not validate `category` against the enum, which is worth a look 
   documented in `RUNBOOK.md` after every build, and a stale server was still holding port 3000
   so the replacement never bound (`EADDRINUSE`). Freeing the port properly and copying the
   assets gave 200s across the board. No product defect.
+
+## Phase 4 — Deploy, Cloudflare Access, docs — 2026-08-03
+
+**Status:** complete-with-deviations — code and docs are live; **the Cloudflare Access bypass and
+the two Google subscriptions are outstanding and can only be done by Chris.** Until the bypass
+exists the feed URL returns a 302 to Access and no calendar can subscribe.
+
+**What was built/done:**
+
+- **Production backed up first**, WAL-safe. `local.db-wal` was 259 KB at the time, so a `cp`
+  would have silently dropped it. Backup at `~/travel-app/local.db.pre-calendar-feed`,
+  `PRAGMA integrity_check` → `ok`, row counts identical to live (7 trips, 51 events).
+- **Deployed** via the real `Deploy-Travel`. Two repos: `travel-app` (`d989ed6`, 44 files) and
+  `mcp-server` (`a805bbb`, on `master`, not `main`).
+- **Migrations applied against live data**: `009_calendar_feed` and `010_hide_from_calendar`,
+  exactly once each. Both unique indexes present. `hide_from_calendar` on `trips` and
+  `trip_transit` verified `notnull=1, default 0`. Row counts unchanged after migration.
+- **Docs**, all in this session: `RUNBOOK.md` (§12 correction plus a new §12a and a feed check
+  in §14 Verify), `travel-app/CLAUDE.md` (new "Calendar feed" section plus the MCP-registry
+  note), root `README.md` (both Access-exception spots), `TESTING.md` (new checklist),
+  `DEPLOY.md` (new Step 5b), `docs/calendar-sync/PROGRESS.md` (superseded, dated).
+  `projects.config.json` was already correct.
+
+**The §12 correction, confirmed empirically rather than by reading:**
+
+`RUNBOOK.md` claimed the app was covered by "the existing wildcard `*.zo-bot.com` Access policy
+set up for the apex". A wildcard does not match the apex in Access, so that described a setup
+that does not exist. An unauthenticated `curl -sSI https://zo-bot.com/travel/settings` returns a
+302 whose `location` names team `red-moon-b0fe.cloudflareaccess.com`, hostname `zo-bot.com`, and
+application `85febcff0df18d6236c59894bfdd392ebbee26b98f7b114230f098da3233ce16` — the **dedicated
+apex application**. Root `README.md` was right; the RUNBOOK is now fixed. This matters because
+the bypass has to sit in front of whichever application actually intercepts.
+
+**A credential was exposed during verification, and rotated:**
+
+The Access 302 embeds the requested path in a base64 `meta` JWT, so capturing that redirect put
+the live feed token in cleartext into the session transcript. Nobody had subscribed yet, so
+rotation was free and was done immediately: old URL → 404, new URL → 200, filters preserved,
+`token_rotated_at` set. **Take the URL from the Settings page, not from anywhere earlier in this
+session.** General lesson for anyone verifying this feature later: an Access redirect echoes the
+full path, so never paste one of these 302s anywhere you would not paste the token itself.
+
+**Deviations from spec (and why):**
+
+- **The Cloudflare Access bypass was not created.** It is dashboard work behind Chris's account,
+  and the spec itself flags it as "the one step here that can lock people out if done wrong".
+  Steps are written out verbatim in `RUNBOOK.md` §12a. Not started, not partially done.
+- **Neither Google account was subscribed** — Chris's accounts, and pointless before the bypass
+  exists.
+- The spec refers to RUNBOOK "§12" and "§14" as numbered sections; the file uses `### 12.` /
+  `### 14.` headings under "Initial VPS Setup". Placed accordingly; the new bypass section is
+  `### 12a`.
+- `Deploy-Travel` is not loaded in this tool's PowerShell session (it runs `-NoProfile`), so the
+  profile was dot-sourced first and the real function invoked — not a hand-rolled equivalent.
+
+**Known gaps / follow-ups:**
+
+- **Blocking, for Chris:** create the Bypass application (`RUNBOOK.md` §12a), then run the three
+  curls, then subscribe both Google accounts.
+- Acceptance-test step 7 — an unchecked filter actually removing events from both subscribed
+  calendars — **cannot be checked until Google polls**, which is commonly 8–24h after
+  subscribing. Explicitly pending; do not record it as passed early.
+- `last_fetched_user_agent` showing `Google-Calendar-Importer` is likewise pending. The current
+  `last_fetched_at` is from a localhost verification fetch, not a subscriber.
+- Verification 6 (read-only in production shows the card but no URL in view-source) and 7 (per-trip
+  `.ics` links work in production) **were not run in production** — both need an authenticated
+  Access session in a browser. Both were verified against a production build locally in Phase 3.
+- The `CALFEED TEMP` fixture rows are **local-dev only** — production has 0 of them (its dataset
+  is 7 trips / 51 events versus 5 / 11 locally). Nothing to clean up on the VPS; the two local
+  rows remain until Chris says otherwise.
+- `ops-check.mjs` **cannot see Cloudflare Access**. Its green run says nothing about the bypass.
+
+**Verification evidence:**
+
+1. `pm2 status` — `travel-app` online after restart; all nine processes online.
+2. Production `schema_migrations`: `009_calendar_feed|1`, `010_hide_from_calendar|1`. Indexes
+   `idx_calendar_feeds_token` and `idx_calendar_feeds_user_slug` both present.
+3. Data intact across the migration: 7 trips, 51 events before and after.
+4. Build clean on the VPS; all four new routes registered
+   (`/api/calendar/config`, `/config/preview`, `/config/rotate`, `/api/calendar/feed/[token]`).
+5. **The feed works in production**, fetched from the VPS's own origin: 200 `text/calendar`,
+   **82 VEVENTs** across the 7 real trips, with **0 `DESCRIPTION` lines and 0 `Conf:` lines** —
+   redaction is live on real data.
+6. `ensureFeed` created exactly one row lazily on first Settings render, as designed.
+7. Rotation in production: old token 404, new token 200, 43 chars, `token_rotated_at` set,
+   `includeBookingDetails` still `false` afterwards.
+8. **nginx needs no change, confirmed not assumed:** `/etc/nginx/sites-available/homepage`
+   contains only prefix and exact `location` blocks — no `location ~` regex that would outrank
+   `location /travel`.
+9. Pre-bypass Cloudflare baseline recorded: both the feed URL and `/travel/settings` 302 to the
+   apex Access application. After the bypass, the feed must be 200 **and `/travel/settings` must
+   still be 302** — the second is what proves the bypass is scoped rather than blanket.
+10. `node tools/ops-check.mjs` → OK, 9 apps consistent. `node tools/project-status.mjs` → exit 0.
+11. Local suite still green at the deployed commit: 98 tests pass, lint 12 warnings / 0 errors.
