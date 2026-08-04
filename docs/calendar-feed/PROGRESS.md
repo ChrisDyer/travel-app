@@ -1,9 +1,8 @@
 # Calendar Feed — Progress
 
-> **Status: Phase 5 built but not deployed — the feed now emits absolute UTC instants instead of floating times, which Google was silently normalising to UTC. Verified locally; production needs migrate → backfill → deploy, in that order.**
-> The Cloudflare Access bypass is live and verified (Phase 4); both Google accounts subscribe and
-> fetch. Deploy sequence for Phase 5 is in `RUNBOOK.md` §12b — the backfill must run before the
-> new build, or timed events flip to all-day and back in both subscribers' calendars.
+> **Status: Complete and deployed. The feed publishes absolute UTC instants; all 5 phases are live.**
+> Production carries 0 floating datetimes and 0 unresolved timezones. Google rewrites every timed
+> event once on its next poll — UIDs are unchanged, so nothing orphans or duplicates.
 > Append one report per completed phase (format below). Never rewrite an earlier
 > phase report; later corrections are new dated entries.
 
@@ -702,3 +701,33 @@ throughout — IATA codes are unambiguous.
 10. Backfill resolved all 5 local trips first try. Re-running it is a no-op.
 11. `npx tsc --noEmit` clean. `npx eslint` over every new and modified file exits 0.
 12. Migration 011 applies once and is idempotent across repeated `runMigrations` calls.
+
+### Phase 5 deployed — 2026-08-03
+
+Sequence run, in the order the plan required so no event churned:
+
+1. WAL-safe backup to `local.db.pre-timezones` (integrity `ok`, 7 trips / 51 events).
+2. The three `011` columns added by hand on the VPS **ahead of** the deploy, so `addColumnIfMissing`
+   would skip them and the migration would simply record itself.
+3. `tools/backfill-timezones.mjs` run against production **before the new code went live** — 7 trips
+   and 2 legs, **9 resolved, 0 unresolved**, first try. This ordering is the whole point: had the
+   build landed first, a large share of events would have gone all-day and flipped back later,
+   visible in both subscribers' calendars.
+4. `Deploy-Travel`. Migration `011_location_timezones` recorded exactly once; data intact.
+
+**Live verification:** 89 UTC instants, 14 all-day, **0 floating, 0 unresolved**. Distinct zones in
+the body include `America/Chicago/America/Los_Angeles`, `America/Los_Angeles/America/Chicago` (the
+return leg, correctly swapped), `America/Chicago/Europe/Paris` and `Europe/Dublin/America/Chicago`.
+Rendering each instant back in its own source zone reproduces the itinerary exactly: AA 1829
+11:45 Chicago → 14:19 Seattle; AA 3234 10:40 Seattle → 16:48 Chicago; UA 987 18:45 Chicago →
+09:55 Paris next morning; Lotte check-in 16:00 Seattle.
+
+**A scare worth recording:** the live feed dropped from 82 VEVENTs to 55, which looked like the
+change silently losing events. It was not — Chris had narrowed the filters in Settings (completed
+trips off, trip banners off, four event categories off). Re-running the preview with default
+filters still returns exactly **82**, and with the stored filters exactly **55**. Check the stored
+filters before concluding a count change is a regression.
+
+**Production data was cleaner than local dev:** the destination that geocodes ambiguously
+("Washington" → Washington DC) exists only in the local database. Production says `"Seattle, WA"`
+and resolved correctly with no override needed.
