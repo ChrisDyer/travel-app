@@ -11,6 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { CoverImageUpload } from './CoverImageUpload';
 import { statusLabel } from '@/lib/trip-status';
+
+/** Every zone this browser's ICU knows. Computed once at module load — the list is ~400 entries
+ *  and never changes during a session. */
+const timeZones: string[] = Intl.supportedValuesOf('timeZone');
 import { apiUrl } from '@/lib/api';
 import { useReadOnly } from '@/lib/read-only';
 
@@ -65,6 +69,8 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
     const body = {
       title: form.get('title'),
       destination: form.get('destination'),
+      // '' means "auto" — store NULL so the resolved_timezone cache is used instead.
+      timezone: (form.get('timezone') as string) || null,
       startDate,
       endDate,
       status: form.get('status'),
@@ -137,6 +143,29 @@ export function TripEditForm({ trip, onSaved, onUpdated, onDeleted, onClose }: T
           <div className="space-y-1.5">
             <Label htmlFor="destination">Destination <span className="text-red-400">*</span></Label>
             <PlacesInput id="destination" name="destination" defaultValue={trip.destination} required placeholder="Rome, Florence, Venice" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="timezone">Timezone</Label>
+            {/* Calendar feeds publish absolute instants, so a wall time needs a zone. Normally it
+                comes from geocoding the destination — this is the override for when that guesses
+                wrong (an ambiguous name like "Washington" resolves to DC, not Seattle) or fails. */}
+            <select
+              id="timezone"
+              name="timezone"
+              defaultValue={trip.timezone ?? ''}
+              className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:text-sm"
+            >
+              <option value="">Auto (from destination)</option>
+              {timeZones.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {trip.timezone
+                ? 'Calendar times for this trip use this zone.'
+                : trip.resolvedTimezone
+                  ? `Auto-detected as ${trip.resolvedTimezone}. Set it explicitly if that is wrong.`
+                  : 'Not detected yet — timed items publish to calendars as all-day until it is.'}
+            </p>
           </div>
 
           <div className="space-y-1.5">

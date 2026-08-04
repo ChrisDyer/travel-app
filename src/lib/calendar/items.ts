@@ -12,8 +12,11 @@
  */
 import { db, camelizeAll } from '@/db';
 import { skipsBooking } from '@/lib/bookings';
+import { legForDate } from '@/lib/legs';
+import { extractIata, toUtcStamp, wallTimeToInstant } from './timezone';
+import { airportTimeZone } from './airport-timezones';
 import type {
-  Trip, TripDay, TripEvent, TripFlight, TripHotel, TripRentalCar, TripParking, TripTransit,
+  Trip, TripDay, TripEvent, TripFlight, TripHotel, TripRentalCar, TripParking, TripTransit, TripLeg,
 } from '@/types/travel';
 import type { CalendarItem } from './filters';
 
@@ -55,6 +58,9 @@ export function buildCalendarItems(opts: { userId: string; tripId?: string }): C
 
   const days = rowsFor<TripDay>('trip_days');
   const dayDate = new Map(days.map((d) => [d.id, d.date]));
+  const legs = rowsFor<TripLeg>('trip_legs');
+  const legsByTrip = new Map<string, TripLeg[]>();
+  for (const leg of legs) legsByTrip.set(leg.tripId, [...(legsByTrip.get(leg.tripId) ?? []), leg]);
   const events = rowsFor<TripEvent>('trip_events');
   const flights = rowsFor<TripFlight>('trip_flights');
   const hotels = rowsFor<TripHotel>('trip_hotels');
@@ -63,6 +69,13 @@ export function buildCalendarItems(opts: { userId: string; tripId?: string }): C
   const transit = rowsFor<TripTransit>('trip_transit');
 
   const items: CalendarItem[] = [];
+
+  /** uid → the IATA code governing each endpoint's timezone, for the two flight kinds only.
+   *  Everything else takes its zone from the covering leg or the trip, so it needs no hint.
+   *  Free-text kinds (transit, rental cars) are deliberately NOT looked up as airport codes:
+   *  "Kings Cross" has no IATA code, and a three-letter false positive would put an event on
+   *  the wrong continent silently. */
+  const airportHints = new Map<string, { start: string | null; end: string | null }>();
 
   /** The trip fields every item inherits. */
   const base = (trip: Trip) => ({
@@ -126,6 +139,10 @@ export function buildCalendarItems(opts: { userId: string; tripId?: string }): C
 
     if (f.departureDate) {
       const route = [f.departureAirport, f.arrivalAirport].filter(Boolean).join(' → ');
+      airportHints.set(uid('flight', f.id), {
+        start: extractIata(f.departureAirport),
+        end: extractIata(f.arrivalAirport),
+      });
       items.push({
         uid: uid('flight', f.id),
         kind: 'flight',
@@ -153,6 +170,12 @@ export function buildCalendarItems(opts: { userId: string; tripId?: string }): C
     if (f.returnDepartureDate) {
       // The journey home runs the other way, so the route reads arrival → departure.
       const route = [f.arrivalAirport, f.departureAirport].filter(Boolean).join(' → ');
+      // The zones swap with it: the return leg DEPARTS from the arrival airport. This must stay
+      // in step with the route line above — they are the same fact stated twice.
+      airportHints.set(uid('flight-return', f.id), {
+        start: extractIata(f.arrivalAirport),
+        end: extractIata(f.departureAirport),
+      });
       items.push({
         uid: uid('flight-return', f.id),
         kind: 'flightReturn',
@@ -281,8 +304,53 @@ export function buildCalendarItems(opts: { userId: string; tripId?: string }): C
     });
   }
 
+  // --- resolve each endpoint's timezone, then convert its wall time to an absolute instant ---
+  //
+  // Chain, first hit wins: the endpoint's own airport (flights only) → the leg covering that
+  // endpoint's date → the trip's override, then its resolved zone → the OTHER endpoint's zone.
+  // That last step is what keeps a flight timed when only one of its two airports is recognised.
+  // Nothing falls back to a server or "home" default: see buildVEvent for why a plausible-looking
+  // wrong zone is worse than an obviously degraded all-day event.
+  for (const item of items) {
+    const trip = tripById.get(item.tripId);
+    if (!trip) continue;
+    const tripLegs = legsByTrip.get(item.tripId) ?? [];
+    const hint = airportHints.get(item.uid);
+
+    const zoneFor = (date: string, iata: string | null): string | null =>
+      (iata ? airportTimeZone(iata) : null)
+      ?? legForDate(tripLegs, date)?.resolvedTimezone
+      ?? trip.timezone
+      ?? trip.resolvedTimezone
+      ?? null;
+
+    let startZone = zoneFor(item.start.date, hint?.start ?? null);
+    let endZone = item.end?.date ? zoneFor(item.end.date, hint?.end ?? null) : null;
+    // Borrow across the pair rather than lose the time on one end.
+    if (!startZone && endZone) startZone = endZone;
+    if (item.end?.date && !endZone) endZone = startZone;
+
+    item.start.timeZone = startZone;
+    if (item.start.time && startZone) {
+      const resolved = wallTimeToInstant(item.start.date, item.start.time, startZone);
+      if (resolved) item.start.utcStamp = toUtcStamp(resolved.ms);
+    }
+    if (item.end?.date) {
+      item.end.timeZone = endZone;
+      if (item.end.time && endZone) {
+        const resolved = wallTimeToInstant(item.end.date, item.end.time, endZone);
+        if (resolved) item.end.utcStamp = toUtcStamp(resolved.ms);
+      }
+    }
+  }
+
   // Deterministic order, so two fetches with no edits are byte-identical. That is what
   // makes the output diffable and what any future ETag would hash.
+  //
+  // Sorted on the LOCAL wall date/time, not the resolved instant. For cross-zone items those now
+  // disagree, so VEVENT order is no longer strictly chronological — irrelevant to every client,
+  // since they sort by DTSTART themselves. Re-sorting on the instant would rewrite the byte
+  // output of every feed for no rendering benefit. Leave it.
   items.sort((a, b) => {
     if (a.start.date !== b.start.date) return a.start.date < b.start.date ? -1 : 1;
     const aTime = a.start.time ?? '';

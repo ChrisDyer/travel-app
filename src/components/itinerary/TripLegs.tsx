@@ -133,6 +133,7 @@ export function TripLegs({ trip, initialLegs, hotels }: TripLegsProps) {
           latitude: null,
           longitude: null,
           resolvedName: null,
+          resolvedTimezone: null,
           sortOrder: draft.sortOrder,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),

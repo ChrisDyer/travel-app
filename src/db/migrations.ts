@@ -314,6 +314,18 @@ const migrations = [
       ALTER TABLE trip_transit     ADD COLUMN hide_from_calendar INTEGER NOT NULL DEFAULT 0;
     `,
   },
+  {
+    name: '011_location_timezones',
+    sql: `
+      -- The calendar feed needs to know what timezone a wall-clock time is in. Two columns on
+      -- trips on purpose, mirroring destination vs resolved_name: resolved_timezone is derived
+      -- cache and is cleared whenever the destination changes; timezone is the user's explicit
+      -- override and survives, so fixing a typo in the destination cannot silently wipe it.
+      ALTER TABLE trips     ADD COLUMN timezone TEXT;
+      ALTER TABLE trips     ADD COLUMN resolved_timezone TEXT;
+      ALTER TABLE trip_legs ADD COLUMN resolved_timezone TEXT;
+    `,
+  },
 ];
 
 /** Tables carrying hide_from_calendar. Shared by migration 010 and the normalizer's contract. */
@@ -362,6 +374,14 @@ function runCustomMigration(db: Database.Database, name: string): boolean {
     for (const table of HIDE_FROM_CALENDAR_TABLES) {
       addColumnIfMissing(db, table, 'hide_from_calendar', 'INTEGER NOT NULL DEFAULT 0');
     }
+    return true;
+  }
+  if (name === '011_location_timezones') {
+    // trips.timezone is the user override and is never cleared by the geocode invalidation;
+    // the resolved_* columns are derived cache. See the migration SQL for why they are separate.
+    addColumnIfMissing(db, 'trips', 'timezone', 'TEXT');
+    addColumnIfMissing(db, 'trips', 'resolved_timezone', 'TEXT');
+    addColumnIfMissing(db, 'trip_legs', 'resolved_timezone', 'TEXT');
     return true;
   }
   return false;

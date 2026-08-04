@@ -32,8 +32,13 @@ export interface CalendarItem {
 
   // --- structurally a superset of EventInput in ./ics.ts ---
   summary: string;
-  start: { date: string; time?: string | null };
-  end?: { date: string; time?: string | null } | null;
+  /** `timeZone` and `utcStamp` mirror EventEndpoint in ./ics.ts — they are filled by items.ts,
+   *  which resolves each endpoint's zone and converts the wall time to an absolute instant.
+   *  This file only ever reads `.date` (for the window gate), so the filter semantics are
+   *  unaffected by them. Kept structurally identical so a CalendarItem is still a valid
+   *  EventInput without conversion. */
+  start: { date: string; time?: string | null; timeZone?: string | null; utcStamp?: string | null };
+  end?: { date: string; time?: string | null; timeZone?: string | null; utcStamp?: string | null } | null;
   location?: string | null;
   description?: string | null;
 

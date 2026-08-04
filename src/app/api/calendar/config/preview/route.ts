@@ -35,5 +35,10 @@ export const POST = withErrorHandling(async (request: Request) => {
   const items = buildCalendarItems({ userId });
   const kept = filterItems(items, filters, localToday());
 
-  return NextResponse.json({ total: kept.length, byKind: countByKind(kept) });
+  // Items with a wall time but no resolved timezone are published as all-day with the time moved
+  // into the title (see buildVEvent). That degradation is deliberate and safe, but silent — so
+  // the count is surfaced in Settings rather than left for someone to notice months later.
+  const unresolvedTimezones = kept.filter((i) => i.start.time && !i.start.utcStamp).length;
+
+  return NextResponse.json({ total: kept.length, byKind: countByKind(kept), unresolvedTimezones });
 });

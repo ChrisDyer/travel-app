@@ -319,6 +319,33 @@ indistinguishable from Google being slow.
 > retention is unwanted, either exclude this location from `access_log` or give it a log
 > format that omits the path.
 
+### 12b. Calendar timezones — backfill after deploying migration 011
+
+The feed publishes absolute UTC instants, so every timed item needs its location's IANA zone.
+Trips and legs get one from the geocoder, cached in `resolved_timezone`. That cache is filled
+lazily by `/api/map` and the weather route, so existing rows have none until something touches
+them — and a trip with no zone publishes its timed items as **all-day**.
+
+Run the backfill **after migrating and before the timezone-aware build goes live**, or both
+subscribers will watch events flip to all-day and back hours later:
+
+```bash
+ssh chris@91.99.230.234 'cd ~/travel-app && DB_PATH=/home/chris/travel-app/local.db   ~/.nvm/versions/node/v24.16.0/bin/node tools/backfill-timezones.mjs'
+```
+
+Idempotent and re-runnable; only touches rows whose `resolved_timezone` is NULL and never bumps
+`updated_at`. `--dry-run` reports without writing. Confirm afterwards:
+
+```bash
+ssh chris@91.99.230.234 'sqlite3 ~/travel-app/local.db   "SELECT COUNT(*) FROM trips WHERE COALESCE(timezone, resolved_timezone) IS NULL"'   # want 0
+```
+
+> **An ambiguous destination geocodes to the wrong place.** "Washington" resolves to Washington
+> DC (`America/New_York`), not Seattle — so a Seattle trip's hotel check-in would be stamped three
+> hours out. The geocoder is confidently wrong here, not silent, so nothing flags it. The fix is
+> the per-trip **Timezone** override on the trip edit form, which survives destination edits.
+> Flights are unaffected: they resolve from their IATA airport codes, which are unambiguous.
+
 ### 13. Google OAuth redirect URI
 
 Unchanged from the original subdomain setup — do not add a new one:

@@ -1,15 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { escapeText, fold, dtProperty, nextDay, buildVEvent, buildCalendar } from './ics.ts';
+import { wallTimeToInstant, toUtcStamp } from './timezone.ts';
 
 const UPDATED = '2026-07-01T09:30:00.000Z';
 const STAMP = '20260701T093000Z';
+
+/** A resolved endpoint, built the same way items.ts builds one. */
+function at(date, time, timeZone = 'America/Chicago') {
+  const r = wallTimeToInstant(date, time, timeZone);
+  return { date, time, timeZone, utcStamp: toUtcStamp(r.ms) };
+}
+/** An endpoint whose zone could not be resolved — a wall time and nothing to anchor it to. */
+function unresolvedAt(date, time) {
+  return { date, time, timeZone: null, utcStamp: null };
+}
+/** An all-day endpoint. */
+function allDay(date) {
+  return { date, time: null, timeZone: null, utcStamp: null };
+}
 
 function item(overrides) {
   return {
     uid: 'event-1@travel.zo-bot.com',
     summary: 'Dinner',
-    start: { date: '2026-08-10', time: '19:00' },
+    start: at('2026-08-10', '19:00'),
     updatedAt: UPDATED,
     ...overrides,
   };
@@ -109,21 +124,27 @@ test('fold still leaves a 75-octet ASCII line alone and breaks a 76-octet one', 
 
 // --- dtProperty ---------------------------------------------------------------
 
-test('dtProperty emits an all-day DATE value when there is no time', () => {
-  assert.equal(dtProperty('DTSTART', '2026-08-10', null), 'DTSTART;VALUE=DATE:20260810');
-  assert.equal(dtProperty('DTSTART', '2026-08-10'), 'DTSTART;VALUE=DATE:20260810');
+test('dtProperty emits an all-day DATE value when there is no instant', () => {
+  assert.equal(dtProperty('DTSTART', allDay('2026-08-10')), 'DTSTART;VALUE=DATE:20260810');
+  assert.equal(dtProperty('DTSTART', { date: '2026-08-10' }), 'DTSTART;VALUE=DATE:20260810');
 });
 
-test('dtProperty emits a floating local datetime when there is a time', () => {
-  assert.equal(dtProperty('DTSTART', '2026-08-10', '19:00'), 'DTSTART:20260810T190000');
+test('dtProperty emits an absolute UTC instant when one was resolved', () => {
+  // 19:00 in Chicago on this date is CDT (UTC-5), so midnight UTC the next day.
+  assert.equal(dtProperty('DTSTART', at('2026-08-10', '19:00')), 'DTSTART:20260811T000000Z');
 });
 
-test('dtProperty zero-pads a single-digit hour', () => {
-  assert.equal(dtProperty('DTSTART', '2026-08-10', '9:05'), 'DTSTART:20260810T090500');
+// The old floating branch is gone on purpose: Google normalises a zone-less datetime to UTC in a
+// subscribed feed, which is what made every timed event render hours off. A wall time with no
+// resolved zone must fall through to all-day rather than silently become a wrong instant.
+test('dtProperty never emits a floating datetime, even with a time present', () => {
+  const out = dtProperty('DTSTART', unresolvedAt('2026-08-10', '19:00'));
+  assert.equal(out, 'DTSTART;VALUE=DATE:20260810');
+  assert.doesNotMatch(out, /T\d{6}$/, 'no naked local datetime');
 });
 
 test('dtProperty returns null without a date', () => {
-  assert.equal(dtProperty('DTSTART', '', '19:00'), null);
+  assert.equal(dtProperty('DTSTART', { date: '', time: '19:00' }), null);
 });
 
 // --- nextDay ------------------------------------------------------------------
@@ -145,25 +166,103 @@ test('nextDay crosses a year boundary', () => {
 
 test('an all-day event gets an exclusive DTEND one day after the end date', () => {
   const out = buildVEvent(item({
-    start: { date: '2026-08-08', time: null },
-    end: { date: '2026-08-15', time: null },
+    start: allDay('2026-08-08'),
+    end: allDay('2026-08-15'),
   }));
   assert.match(out, /DTSTART;VALUE=DATE:20260808/);
   assert.match(out, /DTEND;VALUE=DATE:20260816/);
 });
 
 test('a single-day all-day event still gets a DTEND of the next day', () => {
-  const out = buildVEvent(item({ start: { date: '2026-08-08', time: null }, end: null }));
+  const out = buildVEvent(item({ start: allDay('2026-08-08'), end: null }));
   assert.match(out, /DTEND;VALUE=DATE:20260809/);
 });
 
-test('a timed event with a timed end produces a timed DTEND, not a date one', () => {
+// All-day items must be byte-for-byte what they always were — no Z, no TZID, no X-ZO-TZ. This is
+// what keeps the diff after this change confined to timed events.
+test('an all-day event carries no timezone artefacts at all', () => {
+  const out = buildVEvent(item({ start: allDay('2026-08-08'), end: allDay('2026-08-15') }));
+  // DTSTAMP/LAST-MODIFIED are UTC and always have been; it is DTSTART/DTEND that must stay DATE.
+  for (const line of out.split('\r\n').filter((l) => /^DT(START|END)/.test(l))) {
+    assert.match(line, /^DT(START|END);VALUE=DATE:\d{8}$/, line);
+  }
+  assert.doesNotMatch(out, /TZID/);
+  assert.doesNotMatch(out, /X-ZO-TZ/);
+});
+
+test('a timed event with a timed end produces an instant DTEND, not a date one', () => {
   const out = buildVEvent(item({
-    start: { date: '2026-08-10', time: '19:00' },
-    end: { date: '2026-08-10', time: '21:30' },
+    start: at('2026-08-10', '19:00'),
+    end: at('2026-08-10', '21:30'),
   }));
-  assert.match(out, /DTEND:20260810T213000/);
+  assert.match(out, /DTEND:20260811T023000Z/);
   assert.doesNotMatch(out, /DTEND;VALUE=DATE/);
+});
+
+test('a flight across two zones stamps each end in its own zone', () => {
+  // 11:45 Chicago → 14:19 Seattle: about 4h34m of wall clock, but only 2h34m elapsed.
+  const out = buildVEvent(item({
+    summary: 'AA 1829',
+    start: at('2026-08-08', '11:45', 'America/Chicago'),
+    end: at('2026-08-08', '14:19', 'America/Los_Angeles'),
+  }));
+  assert.match(out, /DTSTART:20260808T164500Z/);
+  assert.match(out, /DTEND:20260808T211900Z/);
+  assert.match(out, /X-ZO-TZ:America\/Chicago\/America\/Los_Angeles/);
+});
+
+// New failure mode: endpoints are instants now, so they are comparable for the first time and can
+// be inverted by one mis-resolved zone. Google mangles or drops such an event.
+test('an end instant at or before the start omits DTEND rather than inverting', () => {
+  const inverted = buildVEvent(item({
+    start: at('2026-08-10', '19:00', 'America/Chicago'),
+    end: at('2026-08-10', '19:00', 'Asia/Tokyo'),   // an earlier instant
+  }));
+  assert.match(inverted, /DTSTART:/);
+  assert.doesNotMatch(inverted, /DTEND/);
+
+  const equal = buildVEvent(item({
+    start: at('2026-08-10', '19:00', 'America/Chicago'),
+    end: at('2026-08-10', '19:00', 'America/Chicago'),
+  }));
+  assert.doesNotMatch(equal, /DTEND/);
+});
+
+// --- unresolved timezone: degrade loudly, never guess -------------------------
+
+test('an unresolved timed event becomes all-day with the time in the title', () => {
+  const out = buildVEvent(item({
+    summary: '✈️ AA 3234',
+    start: unresolvedAt('2026-08-08', '11:45'),
+    end: null,
+  }));
+  assert.match(out, /DTSTART;VALUE=DATE:20260808/);
+  assert.match(out, /SUMMARY:11:45 ✈️ AA 3234/);
+  assert.match(out, /X-ZO-TZ:unresolved/);
+  assert.doesNotMatch(out, /\d{8}T\d{6}Z\r\nDTEND|DTSTART:\d/, 'no instant emitted');
+});
+
+test('an unresolved event with an end time shows the range in the title', () => {
+  const out = buildVEvent(item({
+    summary: 'Hike',
+    start: unresolvedAt('2026-08-10', '09:00'),
+    end: unresolvedAt('2026-08-10', '13:00'),
+  }));
+  assert.match(out, /SUMMARY:09:00–13:00 Hike/);
+  assert.match(out, /DTEND;VALUE=DATE:20260811/);
+});
+
+test('an unresolved event keeps its UID unchanged', () => {
+  // Demotion must never orphan an already-imported event in a subscriber's calendar.
+  const resolved = buildVEvent(item({ start: at('2026-08-10', '19:00') }));
+  const not = buildVEvent(item({ start: unresolvedAt('2026-08-10', '19:00') }));
+  const uidOf = (s) => /UID:(.*)/.exec(s)[1];
+  assert.equal(uidOf(resolved), uidOf(not));
+});
+
+test('a resolved event tags its single zone', () => {
+  const out = buildVEvent(item({ start: at('2026-08-10', '19:00', 'Europe/Paris') }));
+  assert.match(out, /X-ZO-TZ:Europe\/Paris/);
 });
 
 test('a timed event with no end omits DTEND entirely', () => {
@@ -231,4 +330,28 @@ test('the calendar name is escaped and lines are CRLF-joined', () => {
   assert.match(out, /X-WR-CALNAME:Trip\\; one/);
   assert.ok(out.startsWith('BEGIN:VCALENDAR\r\n'));
   assert.ok(out.endsWith('\r\nEND:VCALENDAR'));
+});
+
+// --- the regression guard for this whole change --------------------------------
+
+// If anything ever emits a naked local datetime again, every timed event in every subscriber's
+// calendar silently shifts by their UTC offset. Assert it across a realistic calendar.
+test('no output anywhere contains a floating datetime', () => {
+  const cal = buildCalendar('Zo Travel', [
+    buildVEvent(item({ start: at('2026-08-10', '19:00') })),
+    buildVEvent(item({ uid: 'b', start: at('2026-08-08', '11:45', 'America/Chicago'), end: at('2026-08-08', '14:19', 'America/Los_Angeles') })),
+    buildVEvent(item({ uid: 'c', start: allDay('2026-08-08'), end: allDay('2026-08-15') })),
+    buildVEvent(item({ uid: 'd', start: unresolvedAt('2026-08-08', '11:45') })),
+  ]);
+  for (const line of cal.split('\r\n')) {
+    assert.doesNotMatch(line, /^DT(START|END):\d{8}T\d{6}$/, `floating datetime: ${line}`);
+  }
+});
+
+test('buildVEvent is byte-stable across calls', () => {
+  // The feed's "two fetches with no edits are identical" contract depends on this, and nothing
+  // asserted it before timezones made the output a function of more inputs.
+  const a = buildVEvent(item({ start: at('2026-08-10', '19:00'), end: at('2026-08-10', '21:30') }));
+  const b = buildVEvent(item({ start: at('2026-08-10', '19:00'), end: at('2026-08-10', '21:30') }));
+  assert.equal(a, b);
 });

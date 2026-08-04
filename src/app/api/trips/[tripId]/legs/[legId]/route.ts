@@ -42,7 +42,9 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: Para
       // Changing the place invalidates the cached geocode. Clearing these in the same UPDATE is
       // what stops the weather strip showing the old city's forecast under the new city's label.
       // See docs/trip-legs/00-overview.md, rule 1.
-      setClauses.push('latitude = NULL', 'longitude = NULL', 'resolved_name = NULL');
+      // resolved_timezone is derived from the same geocode, so it goes with them — otherwise the
+      // calendar feed would keep stamping this leg's items with the previous city's timezone.
+      setClauses.push('latitude = NULL', 'longitude = NULL', 'resolved_name = NULL', 'resolved_timezone = NULL');
     }
   }
   if ('startDate' in body) {

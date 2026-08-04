@@ -63,7 +63,7 @@ contradict one, the phase doc is wrong — flag it rather than silently changing
 | Filter storage | One `filters` JSON column on `calendar_feeds` | Four of the filters are sets over closed enums (4+8+8+3 values). As columns that is 23 booleans plus a migration every time `EventCategory` grows — and it has grown twice already (`004`, `005`). Nothing filters in SQL, so no index would ever exist on them, and the form PUTs the whole object atomically. The untyped-JSON risk is contained by exactly one function, `parseFeedFilters()` |
 | Per-item exclusion | A **global** `hide_from_calendar` column, not per-feed overrides | One boolean, one line in the predicate, no join. It means "this does not belong on a calendar", not "hide this from Kate" |
 | Credential | A random token in the **URL path** | Google's fetcher sends no cookies, no Access JWT, and no header we control. The token is the whole credential — the same model as Google's own "secret address in iCal format". Path, not query string, because Cloudflare Access application matching is hostname + path only (see Phase 2) |
-| Times | Floating local, exactly as the existing export emits them | The app stores no timezone anywhere. Floating means "7pm dinner shows at 7pm", which is what you want for travel. Emitting `X-WR-TIMEZONE` would pin them and shift every timed event on a trip abroad |
+| Times | ~~Floating local, exactly as the existing export emits them~~ **SUPERSEDED 2026-08-03 — see Phase 5.** Absolute UTC instants (`...Z`) | The original reasoning assumed RFC 5545 floating semantics ("local wherever viewed") hold in practice. **They do not in Google Calendar**: a subscribed feed with zone-less datetimes is normalised to UTC, so every timed event rendered hours off. Confirmed in production. Times are now converted to absolute instants from the destination's IANA zone. `X-WR-TIMEZONE` is still omitted, but now because it would override each subscriber's own display zone |
 | ICS building | Extract the existing helpers into `src/lib/calendar/ics.ts` and share them | `escapeText`, `fold`, `dtProperty`, `buildVEvent` are already written and correct in `export/route.ts`. Two implementations of RFC 5545 folding is one too many |
 | Normalization | One `buildCalendarItems()` shared by the feed and the per-trip download | The six item tables are normalized in exactly one place. A second copy will drift |
 
@@ -77,8 +77,12 @@ Real follow-ups, deliberately not in this program. Do not build them; do not let
 - **Two-way sync.** The feed is read-only in every calendar client. Editing an event in Google
   changes nothing here, and nothing should try to read it back.
 - **Google OAuth push.** That was `docs/calendar-sync/`, now superseded.
-- **Per-event or per-trip timezones.** Times stay floating. A `trips.timezone` column is not
-  part of this program.
+- ~~**Per-event or per-trip timezones.** Times stay floating. A `trips.timezone` column is not
+  part of this program.~~ **SUPERSEDED 2026-08-03 by Phase 5.** This exclusion rested on the
+  floating-time premise above, which turned out to be wrong. `trips.timezone` (an explicit
+  override) and `trips.resolved_timezone` / `trip_legs.resolved_timezone` (geocoder-derived
+  cache) now exist — migration `011_location_timezones`. Per-*event* timezones are still out of
+  scope: an event's zone comes from its trip or leg, and a flight's from its airport codes.
 - **`VALARM` / reminders.** No alarms are emitted. Subscribers set their own in Google.
 - **Per-leg or per-day calendar entries.** `trip_legs` are not calendar items.
 

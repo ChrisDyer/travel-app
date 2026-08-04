@@ -337,7 +337,12 @@ Manual test cases for the travel itinerary app before going live.
 - [ ] Emptying "What to include" leaves exactly one placeholder VEVENT, not an empty calendar, and still validates.
 - [ ] Malformed filter payloads never 500 — the route answers 200 with defaults applied, and genuinely invalid JSON gives 400.
 - [ ] Rotating the token 404s the old URL, 200s the new one, and leaves the filters intact.
-- [ ] Floating times render at the same wall-clock in a calendar set to a different timezone (a 7pm dinner shows at 7pm).
+- [ ] Times are absolute instants: an 11:45 `Chicago (ORD)` departure shows 11:45 in a calendar set to `America/Chicago` and 09:45 in one set to `America/Los_Angeles`.
+- [ ] A round-trip ORD→LHR shows departure in Chicago time and arrival in London time, with a plausible elapsed duration (not the wall-clock difference).
+- [ ] An event on a DST-change date lands at the right wall time in the trip's zone.
+- [ ] A trip whose destination cannot be geocoded publishes its timed items as all-day with the time in the title, and the Settings card reports the count.
+- [ ] Setting a trip's Timezone override changes those items' instants; clearing it back to "Auto" restores the geocoded zone.
+- [ ] No `DTSTART`/`DTEND` anywhere in the feed is a bare local datetime (no trailing `Z`, no `VALUE=DATE`).
 
 ## App-Level Navigation
 

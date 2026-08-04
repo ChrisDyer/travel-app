@@ -34,6 +34,11 @@ export interface Trip {
   longitude: number | null;
   /** Geocoder display name, e.g. 'Paris, France'. Written only by GET /api/map. */
   resolvedName: string | null;
+  /** Explicit IANA timezone override, e.g. 'America/Chicago'. NULL = derive from the destination.
+   *  Survives destination edits — unlike resolvedTimezone, which is cleared with the geocode. */
+  timezone: string | null;
+  /** Cached IANA timezone of the destination. Derived; cleared whenever destination changes. */
+  resolvedTimezone: string | null;
   /** Keep this whole trip off every calendar feed and the .ics download. Cascades to its
    *  events, flights, hotels, cars, parking and transit. Stored 0/1. */
   hideFromCalendar: number;
@@ -61,6 +66,9 @@ export interface TripLeg {
   longitude: number | null;
   /** The geocoder's display name, e.g. 'Port Angeles, United States'. */
   resolvedName: string | null;
+  /** Cached IANA timezone of this leg's place. Derived; cleared whenever `place` changes.
+   *  The calendar feed stamps items on this leg's dates with it. */
+  resolvedTimezone: string | null;
   /** Tiebreaker for overlapping legs only - legs display in date order. */
   sortOrder: number;
   createdAt: Date | string;

@@ -133,8 +133,34 @@ no OAuth, no token refresh and no drift reconciliation. Full design in `docs/cal
   dashes and the emoji summary prefixes make those differ; the old length-based version emitted
   over-long lines and could split a surrogate pair.
 - **`DTSTAMP`/`LAST-MODIFIED` come from each row's `updated_at`, never `now`**, so two fetches with
-  no edits are byte-identical. `X-WR-TIMEZONE` is deliberately absent — every time is floating
-  local, so "7pm dinner" shows at 7pm wherever you are.
+  no edits are byte-identical — within a deploy. A Node upgrade shipping new tzdata can legitimately
+  change a future instant with no edit; that is correct, not a regression.
+- **Times are absolute UTC instants (`...Z`), never floating.** This reversed a Phase 1–4 decision:
+  RFC 5545 says a zone-less datetime is "local wherever viewed", but Google normalises it to UTC in
+  a subscribed feed, so every timed event rendered hours off. `dtProperty` has no floating branch
+  left — the only two outputs are a `Z` instant and an all-day `VALUE=DATE`, which makes the
+  regression unrepresentable. `X-WR-TIMEZONE` is still absent, but now because Google reads it as
+  the calendar's *display* zone and it would override each subscriber's own preference.
+- **A wall time is resolved to a zone by `items.ts`, not by `ics.ts`** — that is what keeps `ics.ts`
+  import-free. Chain, first hit wins: the endpoint's airport (`extractIata` → `airportTimeZone`,
+  flights only) → the leg covering that endpoint's date → `trips.timezone` (user override) →
+  `trips.resolved_timezone` (geocoder cache) → the other endpoint's zone. **Flights resolve each end
+  separately and `flightReturn` swaps them** — the return leg departs from the arrival airport.
+- **Nothing falls back to a default or "home" zone.** An item whose zone cannot be resolved is
+  published as **all-day with the wall time prepended to its SUMMARY**, tagged `X-ZO-TZ:unresolved`,
+  UID unchanged. A plausible-looking wrong zone (a Paris dinner rendered in Chicago) *looks*
+  correct, which is exactly the silent failure this replaced. The count is surfaced in Settings.
+- **`trips.timezone` survives a destination edit; `resolved_timezone` does not.** The derived cache
+  is cleared alongside `latitude`/`longitude`/`resolved_name`; the override is the user's and is
+  never cleared. This matters for ambiguous names — "Washington" geocodes to DC, not Seattle.
+- **`fold()`, `wallTimeToInstant` and `isValidTimeZone` are the three easy things to "simplify"
+  wrongly.** `fold` measures octets and walks code points. `wallTimeToInstant` brackets and
+  validates — the common guess-then-correct-once form walks *backwards* through a spring-forward
+  gap. `isValidTimeZone` must try/catch `Intl.DateTimeFormat`, never look in
+  `Intl.supportedValuesOf('timeZone')`: those disagree (`Asia/Kolkata` is accepted but unlisted).
+- `src/lib/calendar/airport-timezones.ts` is **generated** by `tools/build-airport-timezones.mjs`
+  (OurAirports + `tz-lookup`, a devDependency). Do not hand-edit. Regenerate only when the picker
+  gains airports — zone *renames* are absorbed by tzdata links.
 
 ## Plan folders
 

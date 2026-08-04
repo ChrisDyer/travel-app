@@ -128,8 +128,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ trip
         if (group.leg) {
           // This GET writes an idempotent geocode cache derived from place. It must not touch
           // trips.updated_at or trip_legs.updated_at, or TripWeather can refetch in a loop.
-          db.prepare('UPDATE trip_legs SET latitude = ?, longitude = ?, resolved_name = ? WHERE id = ? AND trip_id = ?')
-            .run(latitude, longitude, location, group.leg.id, tripId);
+          db.prepare('UPDATE trip_legs SET latitude = ?, longitude = ?, resolved_name = ?, resolved_timezone = ? WHERE id = ? AND trip_id = ?')
+            .run(latitude, longitude, location, resolved.timezone, group.leg.id, tripId);
         }
       }
 

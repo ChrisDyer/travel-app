@@ -100,7 +100,12 @@ function inputToWindow(raw: string): number | null {
   return Number.isInteger(n) && n >= 0 ? n : null;
 }
 
-type Counts = { total: number; byKind: Record<CalendarItemKind, number> };
+type Counts = {
+  total: number;
+  byKind: Record<CalendarItemKind, number>;
+  /** Timed items with no resolvable timezone — published as all-day with the time in the title. */
+  unresolvedTimezones?: number;
+};
 
 export function CalendarFeedActions({
   feedUrl, name, filters: initialFilters,
@@ -230,17 +235,29 @@ export function CalendarFeedActions({
       </div>
 
       {/* --- live count --------------------------------------------------------- */}
-      <p className="text-sm text-slate-600" aria-live="polite">
-        {counts
-          ? <>
-              <span className="font-semibold text-slate-900">{counts.total} items</span>
-              {' · '}
-              {KINDS.filter((k) => counts.byKind[k.value] > 0)
-                .map((k) => `${counts.byKind[k.value]} ${KIND_LABEL[k.value].toLowerCase()}`)
-                .join(' · ') || 'nothing matches these filters'}
-            </>
-          : 'Counting…'}
-      </p>
+      <div className="space-y-1" aria-live="polite">
+        <p className="text-sm text-slate-600">
+          {counts
+            ? <>
+                <span className="font-semibold text-slate-900">{counts.total} items</span>
+                {' · '}
+                {KINDS.filter((k) => counts.byKind[k.value] > 0)
+                  .map((k) => `${counts.byKind[k.value]} ${KIND_LABEL[k.value].toLowerCase()}`)
+                  .join(' · ') || 'nothing matches these filters'}
+              </>
+            : 'Counting…'}
+        </p>
+        {counts && counts.unresolvedTimezones ? (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <strong className="font-medium">
+              {counts.unresolvedTimezones} timed {counts.unresolvedTimezones === 1 ? 'item has' : 'items have'} no timezone
+            </strong>{' '}
+            and {counts.unresolvedTimezones === 1 ? 'is' : 'are'} published as all-day with the time in
+            the title. Open the trip and set its timezone, or give the destination a name that
+            geocodes.
+          </p>
+        ) : null}
+      </div>
 
       {/* --- filters ------------------------------------------------------------ */}
       <div className="grid gap-3">

@@ -19,10 +19,13 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
       INSERT INTO trips (id, user_id, title, destination, start_date, end_date, status,
                          cover_image_url, travelers, notes, travel_mode, rental_car_needed,
                          digest_enabled, digest_day_of_week, budget, budget_currency,
-                         planning_notes, created_at, updated_at)
+                         planning_notes, timezone, created_at, updated_at)
+      -- timezone (the user's override) carries over; the derived geocode columns, including
+      -- resolved_timezone, deliberately do not — the copy re-resolves them lazily, same as
+      -- latitude/longitude/resolved_name always have.
       SELECT ?, user_id, title || ' (Copy)', destination, start_date, end_date, 'planning',
              cover_image_url, travelers, notes, travel_mode, rental_car_needed,
-             0, digest_day_of_week, budget, budget_currency, planning_notes, ?, ?
+             0, digest_day_of_week, budget, budget_currency, planning_notes, timezone, ?, ?
       FROM trips WHERE id = ?
     `).run(newTripId, now, now, tripId);
 
@@ -135,13 +138,13 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     const legs = db.prepare('SELECT * FROM trip_legs WHERE trip_id = ?').all(tripId) as Record<string, unknown>[];
     const insertLeg = db.prepare(`
       INSERT INTO trip_legs (id, trip_id, place, start_date, end_date, latitude, longitude,
-        resolved_name, sort_order, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        resolved_name, resolved_timezone, sort_order, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     for (const l of legs) {
       insertLeg.run(
         crypto.randomUUID(), newTripId, l.place, l.start_date, l.end_date, l.latitude, l.longitude,
-        l.resolved_name, l.sort_order, now, now
+        l.resolved_name, l.resolved_timezone, l.sort_order, now, now
       );
     }
     db.prepare(`

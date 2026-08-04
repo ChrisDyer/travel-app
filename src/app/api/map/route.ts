@@ -74,8 +74,8 @@ export const GET = withErrorHandling(async (request: Request) => {
         // This is an idempotent cache write derived from destination. Do not update
         // trips.updated_at: the trip page keys ItineraryDocument by that value, and bumping
         // it would remount open forms after a map read.
-        db.prepare('UPDATE trips SET latitude = ?, longitude = ?, resolved_name = ? WHERE id = ? AND user_id = ?')
-          .run(resolved.latitude, resolved.longitude, resolved.name, working.id, userId);
+        db.prepare('UPDATE trips SET latitude = ?, longitude = ?, resolved_name = ?, resolved_timezone = ? WHERE id = ? AND user_id = ?')
+          .run(resolved.latitude, resolved.longitude, resolved.name, resolved.timezone, working.id, userId);
         working = { ...working, latitude: resolved.latitude, longitude: resolved.longitude, resolved_name: resolved.name };
       }
     }
