@@ -22,9 +22,10 @@ export function BookingStatusBadge({ status }: { status: BookingStatus }) {
   );
 }
 
-// Shown in place of a booking status for plans that need none: restaurants that don't
-// take reservations, activities you can just turn up to.
-export function NoBookingBadge({ category }: { category: EventCategory }) {
+// Shown in place of a booking status for plans that need none: restaurants that don't take
+// reservations, activities you can just turn up to, a metro ride, street parking. Omit
+// `category` for the non-event kinds — only restaurants get their own wording.
+export function NoBookingBadge({ category }: { category?: EventCategory }) {
   return (
     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-stone-100 text-stone-500 whitespace-nowrap">
       {noBookingLabel(category)}

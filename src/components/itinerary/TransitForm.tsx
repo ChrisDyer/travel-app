@@ -36,6 +36,9 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
+  // Backed by trip_transit.takes_reservations. Off = a walk-up leg — a metro ride, a hailed
+  // taxi — with no booking, confirmation or seat to track.
+  const [needsBooking, setNeedsBooking] = useState<boolean>(Boolean(transit?.takesReservations ?? true));
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -60,9 +63,10 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
       departureTime: form.get('departureTime') || null,
       arrivalDate: form.get('arrivalDate') || null,
       arrivalTime: form.get('arrivalTime') || null,
-      confirmationNumber: form.get('confirmationNumber') || null,
-      seatInfo: form.get('seatInfo') || null,
-      bookingStatus: form.get('bookingStatus'),
+      confirmationNumber: needsBooking ? form.get('confirmationNumber') || null : null,
+      seatInfo: needsBooking ? form.get('seatInfo') || null : null,
+      bookingStatus: needsBooking ? form.get('bookingStatus') : 'unbooked',
+      takesReservations: needsBooking ? 1 : 0,
       cost: form.get('cost') ? Number(form.get('cost')) : null,
       currency: form.get('currency') || null,
       notes: form.get('notes') || null,
@@ -135,8 +139,14 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
               <Input id="routeNumber" name="routeNumber" defaultValue={transit?.routeNumber ?? ''} placeholder="e.g. NE Regional 95" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="confirmationNumber">Confirmation #</Label>
-              <Input id="confirmationNumber" name="confirmationNumber" defaultValue={transit?.confirmationNumber ?? ''} />
+              <Label>Needs booking?</Label>
+              <Select value={needsBooking ? 'yes' : 'no'} onValueChange={(v) => setNeedsBooking(v === 'yes')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -179,23 +189,34 @@ export function TransitForm({ tripId, transit, onSaved, onDeleted, onClose }: Tr
             </div>
           </div>
 
-          <div className="border-t border-stone-100 pt-3 space-y-1.5">
-            <Label htmlFor="seatInfo">Seat / Coach</Label>
-            <Input id="seatInfo" name="seatInfo" defaultValue={transit?.seatInfo ?? ''} placeholder="e.g. Car 4, Seat 22A" />
-          </div>
+          {/* A walk-up leg has no confirmation, seat or booking status to record. */}
+          {needsBooking && (
+            <div className="border-t border-stone-100 pt-3 grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmationNumber">Confirmation #</Label>
+                <Input id="confirmationNumber" name="confirmationNumber" defaultValue={transit?.confirmationNumber ?? ''} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="seatInfo">Seat / Coach</Label>
+                <Input id="seatInfo" name="seatInfo" defaultValue={transit?.seatInfo ?? ''} placeholder="e.g. Car 4, Seat 22A" />
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Booking Status</Label>
-              <Select name="bookingStatus" defaultValue={transit?.bookingStatus ?? 'unbooked'}>
-                <SelectTrigger><SelectValue className="capitalize" /></SelectTrigger>
-                <SelectContent>
-                  {bookingStatuses.map((s) => (
-                    <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {needsBooking && (
+              <div className="space-y-1.5">
+                <Label>Booking Status</Label>
+                <Select name="bookingStatus" defaultValue={transit?.bookingStatus ?? 'unbooked'}>
+                  <SelectTrigger><SelectValue className="capitalize" /></SelectTrigger>
+                  <SelectContent>
+                    {bookingStatuses.map((s) => (
+                      <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="cost">Cost</Label>
               <div className="flex gap-2">

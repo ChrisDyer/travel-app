@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { TripFlight, TripHotel, TripParking, TripRentalCar, TripTransit, BookingStatus, TripStatus } from '@/types/travel';
 import { BookingKind, BookingRef } from './booking-selection';
 import { Button } from '@/components/ui/button';
-import { BookingStatusBadge } from './BookingStatusBadge';
+import { BookingStatusBadge, NoBookingBadge } from './BookingStatusBadge';
+import { noBookingLabel, skipsBooking } from '@/lib/bookings';
 import { getLogoPath } from '@/lib/logos';
 import { BrandLogo } from './BrandLogo';
 import { ChevronDown, ChevronRight } from 'lucide-react';
@@ -211,7 +212,7 @@ export function KeyBookings({
                   </div>
                 </div>
               </div>
-              <BookingStatusBadge status={p.bookingStatus as BookingStatus} />
+              {skipsBooking(p) ? <NoBookingBadge /> : <BookingStatusBadge status={p.bookingStatus as BookingStatus} />}
               <ChevronRight className="h-4 w-4 text-stone-300 shrink-0 self-center" />
             </div>
           </div>
@@ -283,7 +284,7 @@ export function KeyBookings({
                   </div>
                 </div>
               </div>
-              <BookingStatusBadge status={t.bookingStatus as BookingStatus} />
+              {skipsBooking(t) ? <NoBookingBadge /> : <BookingStatusBadge status={t.bookingStatus as BookingStatus} />}
               <ChevronRight className="h-4 w-4 text-stone-300 shrink-0 self-center" />
             </div>
           </div>
@@ -314,7 +315,7 @@ export function KeyBookings({
         ...parking.map((p) => ({
           key: `pp-${p.id}`, icon: '🅿️', title: `${p.location}${p.level ? ` · ${p.level}` : ''}`,
           sub: [p.startDate ? `Drop-off: ${fmtShortDate(p.startDate)}${p.startTime && p.startTime !== '00:00' ? ` @ ${fmt12(p.startTime)}` : ''}` : null, p.endDate ? `Pick-up: ${fmtShortDate(p.endDate)}${p.endTime && p.endTime !== '00:00' ? ` @ ${fmt12(p.endTime)}` : ''}` : null, p.confirmationNumber ? `Conf: ${p.confirmationNumber}` : null, p.orderNumber ? `Order: ${p.orderNumber}` : null, p.cost != null ? `${p.currency ?? 'USD'} ${Number(p.cost).toFixed(2)}` : null].filter(Boolean).join(' · '),
-          status: p.bookingStatus,
+          status: skipsBooking(p) ? noBookingLabel() : p.bookingStatus,
         })),
         ...rentalCars.map((c) => ({
           key: `pc-${c.id}`, icon: '🚗', title: `${c.company}${c.carClass ? ` · ${c.carClass}` : ''}`,
@@ -325,7 +326,7 @@ export function KeyBookings({
           key: `pt-${t.id}`, icon: t.transitType ? (transitTypeIcon[t.transitType] ?? '🚌') : '🚌',
           title: `${t.operator}${t.routeNumber ? ` · ${t.routeNumber}` : ''}`,
           sub: [t.fromLocation && t.toLocation ? `${t.fromLocation} → ${t.toLocation}` : (t.fromLocation ?? t.toLocation), t.departureDate ? `Dep: ${fmtShortDate(t.departureDate)}${t.departureTime ? ` @ ${fmt12(t.departureTime)}` : ''}` : null, t.confirmationNumber ? `Conf: ${t.confirmationNumber}` : null, t.seatInfo, t.cost != null ? `${t.currency ?? 'USD'} ${Number(t.cost).toFixed(2)}` : null].filter(Boolean).join(' · '),
-          status: t.bookingStatus,
+          status: skipsBooking(t) ? noBookingLabel() : t.bookingStatus,
         })),
       ].map(({ key, icon, title, sub, status }) => (
         <div key={key} className="rounded-lg border border-stone-200 p-3 hidden print:flex items-start justify-between gap-2">

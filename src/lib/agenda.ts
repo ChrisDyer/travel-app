@@ -117,15 +117,20 @@ export function needsBooking(userId: string, today: string): BookingNeed[] {
     FROM trip_rental_cars JOIN trips ON trips.id = trip_rental_cars.trip_id
     WHERE trips.user_id = ? AND trips.end_date >= ? AND (trip_rental_cars.booking_status = 'unbooked' OR trip_rental_cars.booking_status IS NULL)
     UNION ALL
+    -- Parking and transit carry takes_reservations too (migration 012). Unlike events there is
+    -- no category gate, so the flag alone decides and the test stays in SQL; skipsBooking() is
+    -- still the authority for that rule -- see src/lib/bookings.ts.
     SELECT trips.id AS trip_id, trips.title AS trip_title, 'parking' AS kind,
       trip_parking.location AS label, trip_parking.start_date AS date
     FROM trip_parking JOIN trips ON trips.id = trip_parking.trip_id
     WHERE trips.user_id = ? AND trips.end_date >= ? AND (trip_parking.booking_status = 'unbooked' OR trip_parking.booking_status IS NULL)
+      AND trip_parking.takes_reservations != 0
     UNION ALL
     SELECT trips.id AS trip_id, trips.title AS trip_title, 'transit' AS kind,
       trip_transit.operator AS label, trip_transit.departure_date AS date
     FROM trip_transit JOIN trips ON trips.id = trip_transit.trip_id
     WHERE trips.user_id = ? AND trips.end_date >= ? AND (trip_transit.booking_status = 'unbooked' OR trip_transit.booking_status IS NULL)
+      AND trip_transit.takes_reservations != 0
   `).all(
     userId, today,
     userId, today,

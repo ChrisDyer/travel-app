@@ -326,6 +326,18 @@ const migrations = [
       ALTER TABLE trip_legs ADD COLUMN resolved_timezone TEXT;
     `,
   },
+  {
+    name: '012_optional_booking_parking_transit',
+    sql: `
+      -- The same "does this need booking?" flag trip_events has carried since 005, now on the
+      -- two other tables whose rows are often walk-ups: a metro ride or a street parking space
+      -- needs nothing booked. Same column name so one helper (src/lib/bookings.ts) covers all
+      -- three; read it as "needs booking", not literally "takes reservations".
+      -- Default 1 so every existing row keeps the booking status it already has.
+      ALTER TABLE trip_parking ADD COLUMN takes_reservations INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE trip_transit ADD COLUMN takes_reservations INTEGER NOT NULL DEFAULT 1;
+    `,
+  },
 ];
 
 /** Tables carrying hide_from_calendar. Shared by migration 010 and the normalizer's contract. */
@@ -382,6 +394,12 @@ function runCustomMigration(db: Database.Database, name: string): boolean {
     addColumnIfMissing(db, 'trips', 'timezone', 'TEXT');
     addColumnIfMissing(db, 'trips', 'resolved_timezone', 'TEXT');
     addColumnIfMissing(db, 'trip_legs', 'resolved_timezone', 'TEXT');
+    return true;
+  }
+  if (name === '012_optional_booking_parking_transit') {
+    for (const table of ['trip_parking', 'trip_transit']) {
+      addColumnIfMissing(db, table, 'takes_reservations', 'INTEGER NOT NULL DEFAULT 1');
+    }
     return true;
   }
   return false;

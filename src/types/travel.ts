@@ -162,6 +162,9 @@ export interface TripParking {
   orderNumber: string | null;
   vendor: string | null;
   bookingStatus: BookingStatus;
+  // "Does this need booking?" — 0 for street parking or a walk-up garage, which carries no
+  // booking status at all. Stored 0/1, treat as truthy. See src/lib/bookings.ts.
+  takesReservations: boolean;
   cost: number | null;
   currency: string | null;
   notes: string | null;
@@ -237,6 +240,9 @@ export interface TripTransit {
   confirmationNumber: string | null;
   seatInfo: string | null;
   bookingStatus: BookingStatus;
+  // "Does this need booking?" — 0 for a metro ride or a hailed taxi, which carries no booking
+  // status at all. Stored 0/1, treat as truthy. See src/lib/bookings.ts.
+  takesReservations: boolean;
   cost: number | null;
   currency: string | null;
   notes: string | null;
@@ -338,6 +344,7 @@ export interface ProposedParking {
   orderNumber?: string | null;
   vendor?: string | null;
   bookingStatus?: BookingStatus;
+  takesReservations?: boolean | null;
   cost?: number | null;
   currency?: string | null;
   notes?: string | null;
@@ -357,6 +364,7 @@ export interface ProposedTransit {
   confirmationNumber?: string | null;
   seatInfo?: string | null;
   bookingStatus?: BookingStatus;
+  takesReservations?: boolean | null;
   cost?: number | null;
   currency?: string | null;
   notes?: string | null;

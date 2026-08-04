@@ -36,7 +36,6 @@ test("local Travel navigation preserves IDs, labels, order, and hrefs", () => {
   assert.deepEqual(entries, [
     { id: "overview", label: "Overview", href: "/" },
     { id: "trips", label: "Trips", href: "/trips" },
-    { id: "new", label: "New trip", href: "/trips/new" },
     { id: "map", label: "Map", href: "/map" },
     { id: "settings", label: "Settings", href: "/settings" },
   ]);

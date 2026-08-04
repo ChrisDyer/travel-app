@@ -23,7 +23,8 @@ export interface CalendarItem {
   tripStatus: TripStatus;
   /** null when the app deliberately shows no status: 'tripSpan' and hikes. */
   bookingStatus: BookingStatus | null;
-  /** true only for trip_events where skipsBooking() holds. */
+  /** true where skipsBooking() holds — a walk-in restaurant or walk-up activity, a walk-up
+   *  parking space or transit leg. */
   noBookingNeeded: boolean;
   /** Only set when kind === 'event'. */
   eventCategory: EventCategory | null;
@@ -55,7 +56,8 @@ export interface CalendarFeedFilters {
   eventCategories: EventCategory[];
   /** Only consulted for items that actually carry a booking status. */
   bookingStatuses: BookingStatus[];
-  /** Events where skipsBooking() is true (walk-in restaurant, walk-up activity). */
+  /** Items where skipsBooking() is true (walk-in restaurant, walk-up activity, street
+   *  parking, a metro ride). */
   includeNoBookingNeeded: boolean;
   /** Publish each item's DESCRIPTION — confirmation numbers, room/seat details and free-text
    *  notes. **Defaults to false for a feed**, and it is a security control, not a preference:

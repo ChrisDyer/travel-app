@@ -33,18 +33,31 @@ components reading `headers()`. See `docs/plans/2026-07-per-user-read-only/04-tr
 ## Plans that need no booking
 
 Not every plan is bookable: a restaurant may not take reservations, an activity may be a
-walk-up (a stroll, a self-guided walking tour). Both share one column —
-`trip_events.takes_reservations` (`1` = needs booking, the default; migration
-`005_restaurant_event_fields`). The name predates the activity case; read it as
-**"does this need booking?"**. Helpers live in `src/lib/bookings.ts` — `bookingIsOptional()`
-for the categories that offer the toggle (restaurant, activity), `skipsBooking()` for
-"this plan needs nothing booked", `noBookingLabel()` for the wording ("No reservations"
-vs "No booking needed"). Use them rather than re-testing the column inline.
+walk-up (a stroll, a self-guided walking tour), a note is rarely booked at all, parking may
+be a metered kerbside space, a transit leg may be a metro ride paid at the gate. All of them
+share one column name — `takes_reservations` (`1` = needs booking, the default) — on three
+tables: `trip_events` (migration `005_restaurant_event_fields`) and `trip_parking` /
+`trip_transit` (migration `012_optional_booking_parking_transit`). The name predates
+everything but the restaurant case; read it as **"does this need booking?"**.
 
-When the flag is off the event carries no booking status: the form hides those fields and
-nulls them on save, the card and detail sheet show a grey badge instead of the red "Needs
-Booking" one, and `CancellationDeadlines` leaves it out of the "Needs Booking" list.
-Hikes are separate — they never have a booking status at all.
+Helpers live in `src/lib/bookings.ts`. Use them rather than re-testing the column inline:
+
+- `bookingIsOptional(category)` — the **event categories** that offer the toggle: restaurant,
+  activity, note. Flights, hotels and rental cars are always bookings and never get it.
+- `skipsBooking(item)` — "this plan needs nothing booked". **One predicate for both shapes**:
+  pass a `trip_events` row (gated on category as well) or a `trip_parking` / `trip_transit`
+  row, which has no `category` and is decided by the flag alone — every parking space or
+  transit leg may be a walk-up. Structural typing picks the branch; do not split it in two.
+- `noBookingLabel(category?)` — the wording. Only restaurants say "No reservations"; everything
+  else, including the category-less kinds, says "No booking needed".
+
+When the flag is off the item carries no booking status: the form hides the confirmation /
+vendor / seat / cancellation fields and **nulls them on save**, the card, `KeyBookings` row and
+detail sheet show a grey badge instead of the red "Needs Booking" one, `CancellationDeadlines`
+leaves it out of the "Needs Booking" list, and the calendar feed sets `noBookingNeeded` so the
+item answers to the feed's `includeNoBookingNeeded` toggle rather than its booking-status list.
+
+Hikes are separate — they never have a booking status at all, whatever the flag says.
 
 ## Trip brief
 
@@ -193,6 +206,12 @@ keys `<ItineraryDocument>` by that value.
 `mcp-server/travel-write.js` mirrors the writable `colMap` field lists in
 `src/app/api/trips/**`. When a migration or route change adds a writable column, update
 that registry too, or Claude's travel write tools will reject the new field as unknown. The derived trip geocode columns (latitude, longitude, esolvedName) are deliberately excluded from TRIP_FIELDS.
+
+`takesReservations` is registered for the `event`, `parking` and `transit` kinds — the three
+tables carrying the column. `validateFields()` in that file coerces JS booleans to `0`/`1`
+before the request goes out, because travel-app binds request values straight into
+better-sqlite3, which rejects booleans outright. That is what makes the registry's documented
+`booleans` convention true; don't remove it.
 
 `hideFromCalendar` is registered there — in `TRIP_FIELDS.fields` and in the `fields` of the
 `event`, `flight`, `hotel`, `rental_car`, `parking` and `transit` kinds — so Claude can hide an

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useReadOnly } from "@/lib/read-only";
 
-export type LocalNavId = "overview" | "trips" | "new" | "map" | "settings";
+export type LocalNavId = "overview" | "trips" | "map" | "settings";
 export type LocalNavItem = {
   id: LocalNavId;
   label: string;
@@ -38,8 +38,10 @@ const localNavSections: LocalNavSection[] = [
     label: "Plan",
     items: [
       { id: "overview", label: "Overview", href: "/", icon: LayoutDashboard },
+      // No "New trip" entry: every surface that lists trips already offers one
+      // (NewTripAction in the header, the empty-state buttons on /, /trips and /map),
+      // so a nav slot for it was redundant. /trips/new then falls under the "trips" id.
       { id: "trips", label: "Trips", href: "/trips", icon: ListChecks },
-      { id: "new", label: "New trip", href: "/trips/new", icon: Plus, adminOnly: true },
     ],
   },
   {

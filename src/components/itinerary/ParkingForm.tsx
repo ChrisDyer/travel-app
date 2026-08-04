@@ -27,6 +27,9 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
+  // Backed by trip_parking.takes_reservations. Off = street parking or a walk-up garage,
+  // with no reservation, confirmation or vendor to track.
+  const [needsBooking, setNeedsBooking] = useState<boolean>(Boolean(parking?.takesReservations ?? true));
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -49,10 +52,11 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
       startTime: (form.get('startTime') as string || '').replace(/^00:00$/, '') || null,
       endDate: form.get('endDate') || null,
       endTime: (form.get('endTime') as string || '').replace(/^00:00$/, '') || null,
-      confirmationNumber: form.get('confirmationNumber') || null,
-      orderNumber: form.get('orderNumber') || null,
-      vendor: form.get('vendor') || null,
-      bookingStatus: form.get('bookingStatus'),
+      confirmationNumber: needsBooking ? form.get('confirmationNumber') || null : null,
+      orderNumber: needsBooking ? form.get('orderNumber') || null : null,
+      vendor: needsBooking ? form.get('vendor') || null : null,
+      bookingStatus: needsBooking ? form.get('bookingStatus') : 'unbooked',
+      takesReservations: needsBooking ? 1 : 0,
       cost: form.get('cost') ? Number(form.get('cost')) : null,
       currency: form.get('currency') || null,
       notes: form.get('notes') || null,
@@ -119,6 +123,17 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <Label>Needs booking?</Label>
+            <Select value={needsBooking ? 'yes' : 'no'} onValueChange={(v) => setNeedsBooking(v === 'yes')}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="border-t border-stone-100 pt-3">
             <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-3">Drop-off</p>
             <div className="grid grid-cols-2 gap-4">
@@ -147,34 +162,41 @@ export function ParkingForm({ tripId, parking, onSaved, onDeleted, onClose }: Pa
             </div>
           </div>
 
-          <div className="border-t border-stone-100 pt-3 grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmationNumber">Confirmation #</Label>
-              <Input id="confirmationNumber" name="confirmationNumber" defaultValue={parking?.confirmationNumber ?? ''} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="orderNumber">Order #</Label>
-              <Input id="orderNumber" name="orderNumber" defaultValue={parking?.orderNumber ?? ''} />
-            </div>
-          </div>
+          {/* Street parking or a walk-up garage has no confirmation, vendor or booking status. */}
+          {needsBooking && (
+            <>
+              <div className="border-t border-stone-100 pt-3 grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirmationNumber">Confirmation #</Label>
+                  <Input id="confirmationNumber" name="confirmationNumber" defaultValue={parking?.confirmationNumber ?? ''} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="orderNumber">Order #</Label>
+                  <Input id="orderNumber" name="orderNumber" defaultValue={parking?.orderNumber ?? ''} />
+                </div>
+              </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="vendor">Vendor / Booked Through</Label>
-            <Input id="vendor" name="vendor" defaultValue={parking?.vendor ?? ''} placeholder="e.g. Ticketmaster, SpotHero" />
-          </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="vendor">Vendor / Booked Through</Label>
+                <Input id="vendor" name="vendor" defaultValue={parking?.vendor ?? ''} placeholder="e.g. Ticketmaster, SpotHero" />
+              </div>
+            </>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Booking Status</Label>
-              <Select name="bookingStatus" defaultValue={parking?.bookingStatus ?? 'unbooked'}>
-                <SelectTrigger><SelectValue className="capitalize" /></SelectTrigger>
-                <SelectContent>
-                  {bookingStatuses.map((s) => (
-                    <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {needsBooking && (
+              <div className="space-y-1.5">
+                <Label>Booking Status</Label>
+                <Select name="bookingStatus" defaultValue={parking?.bookingStatus ?? 'unbooked'}>
+                  <SelectTrigger><SelectValue className="capitalize" /></SelectTrigger>
+                  <SelectContent>
+                    {bookingStatuses.map((s) => (
+                      <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="cost">Cost</Label>
               <div className="flex gap-2">

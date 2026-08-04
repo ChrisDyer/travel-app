@@ -102,10 +102,10 @@ export function CancellationDeadlines({ hotels, events, flights, rentalCars, par
     ...rentalCars.filter((c) => c.bookingStatus === 'unbooked').map((c) => ({
       key: `car-${c.id}`, icon: '🚗', logoName: c.company, name: c.company,
     })),
-    ...parking.filter((p) => p.bookingStatus === 'unbooked').map((p) => ({
+    ...parking.filter((p) => p.bookingStatus === 'unbooked' && !skipsBooking(p)).map((p) => ({
       key: `parking-${p.id}`, icon: '🅿️', logoName: null, name: p.location,
     })),
-    ...transit.filter((t) => t.bookingStatus === 'unbooked').map((t) => ({
+    ...transit.filter((t) => t.bookingStatus === 'unbooked' && !skipsBooking(t)).map((t) => ({
       key: `transit-${t.id}`, icon: '🚆', logoName: null,
       name: [t.operator, t.routeNumber].filter(Boolean).join(' '),
     })),

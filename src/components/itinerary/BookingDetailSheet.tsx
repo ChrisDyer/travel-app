@@ -274,7 +274,7 @@ export function BookingDetailSheet({
       icon = <BrandLogo name={p.vendor} fallback="🅿️" heightClass="h-5" />;
       title = p.location;
       subtitle = p.address;
-      status = <BookingStatusBadge status={p.bookingStatus} />;
+      status = skipsBooking(p) ? <NoBookingBadge /> : <BookingStatusBadge status={p.bookingStatus} />;
       sections = [
         [
           { label: 'Drop-off', value: pointValue(p.startDate, p.startTime, true) },
@@ -330,7 +330,7 @@ export function BookingDetailSheet({
         ? `${t.fromLocation ?? ''}${t.fromLocation && t.toLocation ? ' → ' : ''}${t.toLocation ?? ''}`
         : null;
       subtitle = route;
-      status = <BookingStatusBadge status={t.bookingStatus} />;
+      status = skipsBooking(t) ? <NoBookingBadge /> : <BookingStatusBadge status={t.bookingStatus} />;
       sections = [
         [
           { label: 'Departs', value: pointValue(t.departureDate, t.departureTime) },

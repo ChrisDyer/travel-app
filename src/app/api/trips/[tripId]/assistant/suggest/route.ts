@@ -41,7 +41,7 @@ const TOOLS: Anthropic.Tool[] = [
         bookingStatus: { type: 'string', enum: ['unbooked', 'pending', 'confirmed'], description: 'Booking status. Ignored when takesReservations is false.' },
         takesReservations: {
           type: 'boolean',
-          description: 'Whether this needs booking ahead. Restaurants and activities only. Set false for walk-ins and walk-up activities that need no ticket or reservation — a stroll through a park, a self-guided walking tour, browsing a market. Defaults to true.',
+          description: 'Whether this needs booking ahead. Restaurants, activities and notes only. Set false for walk-ins and walk-up activities that need no ticket or reservation — a stroll through a park, a self-guided walking tour, browsing a market. Defaults to true.',
         },
         cost: { type: 'number', description: 'Cost amount.' },
         currency: { type: 'string', description: 'Currency code, e.g. USD.' },
@@ -134,6 +134,10 @@ const TOOLS: Anthropic.Tool[] = [
         orderNumber: { type: 'string' },
         vendor: { type: 'string', description: 'Vendor or booking service name.' },
         bookingStatus: { type: 'string', enum: ['unbooked', 'pending', 'confirmed'] },
+        takesReservations: {
+          type: 'boolean',
+          description: 'Whether this space needs booking ahead. Set false for street parking or a walk-up garage you simply drive into. Defaults to true.',
+        },
         cost: { type: 'number' },
         currency: { type: 'string' },
         notes: { type: 'string' },
@@ -159,6 +163,10 @@ const TOOLS: Anthropic.Tool[] = [
         confirmationNumber: { type: 'string' },
         seatInfo: { type: 'string', description: 'Seat or coach assignment.' },
         bookingStatus: { type: 'string', enum: ['unbooked', 'pending', 'confirmed'] },
+        takesReservations: {
+          type: 'boolean',
+          description: 'Whether this leg needs a ticket booked ahead. Set false for a metro or bus ride paid at the gate, or a hailed taxi. Defaults to true.',
+        },
         cost: { type: 'number' },
         currency: { type: 'string' },
         notes: { type: 'string' },

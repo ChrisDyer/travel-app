@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { db, camelize } from '@/db';
+import { bookingIsOptional } from '@/lib/bookings';
 import type {
   Proposal,
   TripEvent,
@@ -143,6 +144,7 @@ const parkingInputSchema = z.object({
   orderNumber: optionalText,
   vendor: optionalText,
   bookingStatus: bookingStatusSchema.optional(),
+  takesReservations: optionalBoolean,
   cost: optionalNumber,
   currency: optionalText,
   notes: optionalText,
@@ -162,6 +164,7 @@ const transitInputSchema = z.object({
   confirmationNumber: optionalText,
   seatInfo: optionalText,
   bookingStatus: bookingStatusSchema.optional(),
+  takesReservations: optionalBoolean,
   cost: optionalNumber,
   currency: optionalText,
   notes: optionalText,
@@ -240,9 +243,9 @@ export function applyTravelWriteTools(tripId: string, inputs: unknown[]): Travel
         continue;
       }
       // A walk-in restaurant or walk-up activity has nothing to book: don't let a
-      // proposal leave it carrying a booking status or a confirmation number.
-      const skipsBooking = input.takesReservations === false
-        && (input.category === 'restaurant' || input.category === 'activity');
+      // proposal leave it carrying a booking status or a confirmation number. The set of
+      // categories that may skip booking lives in one place — see src/lib/bookings.ts.
+      const skipsBooking = input.takesReservations === false && bookingIsOptional(input.category);
       const id = crypto.randomUUID();
       const row = db.prepare(`
         INSERT INTO trip_events (
@@ -349,20 +352,26 @@ export function applyTravelWriteTools(tripId: string, inputs: unknown[]): Travel
         result.skipped.push({ type: 'parking', reason: 'already added' });
         continue;
       }
+      // Street parking has nothing to book — same treatment as a walk-up activity above.
+      const skipsBooking = input.takesReservations === false;
       const id = crypto.randomUUID();
       const row = db.prepare(`
         INSERT INTO trip_parking (
           id, trip_id, location, address, level, start_date, start_time, end_date, end_time,
-          confirmation_number, order_number, vendor, booking_status, cost, currency, notes,
-          created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          confirmation_number, order_number, vendor, booking_status, takes_reservations,
+          cost, currency, notes, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
       `).get(
         id, tripId, input.location, input.address ?? null, input.level ?? null,
         input.startDate ?? null, input.startTime ?? null,
         input.endDate ?? null, input.endTime ?? null,
-        input.confirmationNumber ?? null, input.orderNumber ?? null, input.vendor ?? null,
-        input.bookingStatus ?? 'unbooked', input.cost ?? null, input.currency ?? null,
+        skipsBooking ? null : (input.confirmationNumber ?? null),
+        skipsBooking ? null : (input.orderNumber ?? null),
+        skipsBooking ? null : (input.vendor ?? null),
+        skipsBooking ? 'unbooked' : (input.bookingStatus ?? 'unbooked'),
+        skipsBooking ? 0 : 1,
+        input.cost ?? null, input.currency ?? null,
         input.notes ?? null, now, now
       ) as Record<string, unknown>;
       result.addedParking.push(camelize<TripParking>(row));
@@ -372,22 +381,27 @@ export function applyTravelWriteTools(tripId: string, inputs: unknown[]): Travel
         result.skipped.push({ type: 'transit', reason: 'already added' });
         continue;
       }
+      // A metro ride or a hailed taxi has nothing to book — as above.
+      const skipsBooking = input.takesReservations === false;
       const id = crypto.randomUUID();
       const row = db.prepare(`
         INSERT INTO trip_transit (
           id, trip_id, transit_type, operator, route_number, from_location, to_location,
           departure_date, departure_time, arrival_date, arrival_time,
-          confirmation_number, seat_info, booking_status, cost, currency, notes,
-          created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          confirmation_number, seat_info, booking_status, takes_reservations,
+          cost, currency, notes, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
       `).get(
         id, tripId, input.transitType ?? null, input.operator,
         input.routeNumber ?? null, input.fromLocation ?? null, input.toLocation ?? null,
         input.departureDate ?? null, input.departureTime ?? null,
         input.arrivalDate ?? null, input.arrivalTime ?? null,
-        input.confirmationNumber ?? null, input.seatInfo ?? null,
-        input.bookingStatus ?? 'unbooked', input.cost ?? null, input.currency ?? null,
+        skipsBooking ? null : (input.confirmationNumber ?? null),
+        skipsBooking ? null : (input.seatInfo ?? null),
+        skipsBooking ? 'unbooked' : (input.bookingStatus ?? 'unbooked'),
+        skipsBooking ? 0 : 1,
+        input.cost ?? null, input.currency ?? null,
         input.notes ?? null, now, now
       ) as Record<string, unknown>;
       result.addedTransit.push(camelize<TripTransit>(row));

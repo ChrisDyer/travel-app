@@ -19,7 +19,8 @@ export const PATCH = withErrorHandling(async (request: Request, { params }: Para
     departureDate: 'departure_date', departureTime: 'departure_time',
     arrivalDate: 'arrival_date', arrivalTime: 'arrival_time',
     confirmationNumber: 'confirmation_number', seatInfo: 'seat_info',
-    bookingStatus: 'booking_status', cost: 'cost', currency: 'currency', notes: 'notes',
+    bookingStatus: 'booking_status', takesReservations: 'takes_reservations',
+    cost: 'cost', currency: 'currency', notes: 'notes',
     hideFromCalendar: 'hide_from_calendar',
   };
   const setClauses: string[] = ['updated_at = ?'];

@@ -31,9 +31,9 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     INSERT INTO trip_transit (
       id, trip_id, transit_type, operator, route_number, from_location, to_location,
       departure_date, departure_time, arrival_date, arrival_time,
-      confirmation_number, seat_info, booking_status, cost, currency, notes,
-      hide_from_calendar, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      confirmation_number, seat_info, booking_status, takes_reservations,
+      cost, currency, notes, hide_from_calendar, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING *
   `).get(
     id, tripId, body.transitType ?? null, body.operator,
@@ -41,7 +41,8 @@ export const POST = withErrorHandling(async (request: Request, { params }: { par
     body.departureDate ?? null, body.departureTime ?? null,
     body.arrivalDate ?? null, body.arrivalTime ?? null,
     body.confirmationNumber ?? null, body.seatInfo ?? null,
-    body.bookingStatus ?? 'unbooked', body.cost ?? null, body.currency ?? null,
+    body.bookingStatus ?? 'unbooked', body.takesReservations ?? 1,
+    body.cost ?? null, body.currency ?? null,
     body.notes ?? null, body.hideFromCalendar ?? 0, now, now
   ) as Record<string, unknown>;
 
