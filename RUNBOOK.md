@@ -301,7 +301,11 @@ ssh chris@91.99.230.234 'grep -n "location" /etc/nginx/sites-available/homepage'
 ```
 
 **If curl works but Google still says "Could not fetch the URL":** Google's importer
-identifies as `Mozilla/5.0 (compatible; Google-Calendar-Importer)` and is **not** on
+identifies as the bare string `Google-Calendar-Importer` — **not**
+`Mozilla/5.0 (compatible; Google-Calendar-Importer)`, which is what this runbook claimed
+until 2026-08-04 and what a plausible-looking guess produces. Observed on the wire that day
+(see §12c). Match on a `contains` of `Google-Calendar-Importer` rather than an exact string,
+so either form is caught. It is **not** on
 Cloudflare's verified-bot list, so Bot Fight Mode / Super Bot Fight Mode or Browser
 Integrity Check will challenge it. Add a WAF custom rule — expression
 `http.request.uri.path starts_with "/travel/api/calendar/feed/"`, action **Skip**
@@ -345,6 +349,63 @@ ssh chris@91.99.230.234 'sqlite3 ~/travel-app/local.db   "SELECT COUNT(*) FROM t
 > hours out. The geocoder is confidently wrong here, not silent, so nothing flags it. The fix is
 > the per-trip **Timezone** override on the trip edit form, which survives destination edits.
 > Flights are unaffected: they resolve from their IATA airport codes, which are unambiguous.
+
+### 12c. A subscriber's calendar shows stale times after a rendering-only fix
+
+**Symptom (observed 2026-08-04).** The Phase 5 fix that publishes absolute UTC instants was
+live and correct — the feed served `DTSTART:20260809T201000Z` for a 13:10 Seattle event — yet a
+subscriber's Google Calendar still showed the pre-fix time (`13:10` read as UTC, so 8:10am CT
+instead of 3:10pm CT). Re-subscribing fixed it. Waiting did not, over ~18 hours.
+
+**Diagnosis order.** Work outside-in; each step is cheap and rules out a whole class:
+
+1. **Is the feed itself right?** Fetch the public URL and decode the instant, don't eyeball it:
+   ```bash
+   curl -s "https://zo-bot.com/travel/api/calendar/feed/<token>.ics"      | grep -B4 '<event title>'
+   ```
+   A correct body here means the bug is on Google's side, not in `items.ts` / `ics.ts`.
+2. **Does the subscriber's URL still resolve?** Compare the URL in Google Calendar →
+   *Settings → the calendar → Integrate calendar* against the live token. **Rotation is the only
+   revocation and it is silent**: the old URL 404s, and Google does not delete a calendar that
+   stops resolving, so it freezes at its last successful fetch forever. Check
+   `token_rotated_at` — if it is newer than the subscription, this is the cause.
+3. **Is Google actually polling?** See `last_fetched_at` / `last_fetched_user_agent`. **Do not
+   send a spoofed `Google-Calendar-Importer` user agent while testing** — the column is
+   single-valued and one such request destroys the only evidence of who last fetched. Use a
+   default curl UA, which is unmistakably yours.
+4. **If Google is polling and the body is right, the events still may not update.** See below.
+
+> **The open one: a rendering-only change carries no version signal.**
+> `DTSTAMP`/`LAST-MODIFIED` come from each row's `updated_at` (deliberately — it is what makes
+> two unchanged fetches byte-identical), and the feed emits **no `SEQUENCE` property at all**.
+> A fix that changes how a row renders without touching the row therefore reaches Google as a
+> VEVENT whose only difference is `DTSTART`, with every change-detection field identical to the
+> cached copy. Whether Google's importer diffs the whole body or short-circuits on
+> UID + `LAST-MODIFIED`/`SEQUENCE` is undocumented, and `CLAUDE.md`'s claim that "the feed body
+> *is* the state; Google replaces the whole calendar on each poll" is a design assertion that
+> has **not** been verified against this case. Until it is, assume a rendering-only fix does not
+> reach existing subscribers, and tell them to delete and re-add.
+>
+> If this recurs, the fix shape is a global feed-format revision added to a per-row counter,
+> emitted as `SEQUENCE` — that forces a client re-read on format changes without touching any
+> row's `updated_at` and losing byte-stability.
+
+**Re-subscribing is the reliable remedy** and covers every cause above: a fresh calendar imports
+every event from scratch. It costs each subscriber two minutes, and everyone must do it.
+
+> **TEMPORARY — added 2026-08-04, remove when the interval is known.** A probe samples
+> `last_fetched_at` every 15 minutes into `~/travel-app/calendar-fetch-probe.log`, because that
+> column is single-valued: a one-off check shows the most recent fetch, never the count, and the
+> count is what distinguishes the two causes above. Read it deduped:
+>
+> ```bash
+> ssh chris@91.99.230.234 'sort -u -t"|" -k2,3 ~/travel-app/calendar-fetch-probe.log | tail -40'
+> ```
+>
+> Two genuine Google fetches were observed 65 minutes apart on the day it was installed
+> (`14:29:10Z`, `15:34:16Z`), which points at cause 2 — but a new subscription may be polled
+> harder at first, so weight the later gaps. To remove: drop the `*/15` line from `crontab -e`
+> and delete `~/travel-app/tools/calendar-fetch-probe.sh` and the log.
 
 ### 13. Google OAuth redirect URI
 

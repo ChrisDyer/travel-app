@@ -110,9 +110,13 @@ path pattern is too broad — fix it immediately.
 
 ### If curl works but Google still says "Could not fetch the URL"
 
-Google's importer identifies as `Mozilla/5.0 (compatible; Google-Calendar-Importer)` and is
-**not** on Cloudflare's verified-bot list. If Bot Fight Mode / Super Bot Fight Mode or Browser
-Integrity Check is enabled for `zo-bot.com`, it will be challenged. Add a WAF custom rule:
+Google's importer identifies as the bare string `Google-Calendar-Importer`. This document
+originally said `Mozilla/5.0 (compatible; Google-Calendar-Importer)`; that was wrong, and was
+corrected on 2026-08-04 after observing a real subscriber fetch (`RUNBOOK.md` §12c). Prefer a
+`contains` match on `Google-Calendar-Importer` over an exact comparison.
+
+It is **not** on Cloudflare's verified-bot list. If Bot Fight Mode / Super Bot Fight Mode or
+Browser Integrity Check is enabled for `zo-bot.com`, it will be challenged. Add a WAF custom rule:
 
 - Expression: `http.request.uri.path starts_with "/travel/api/calendar/feed/"`
 - Action: **Skip** — remaining custom rules, rate limiting, Super Bot Fight Mode, Browser

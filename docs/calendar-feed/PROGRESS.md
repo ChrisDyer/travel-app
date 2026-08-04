@@ -1,8 +1,10 @@
 # Calendar Feed — Progress
 
 > **Status: Complete and deployed. The feed publishes absolute UTC instants; all 5 phases are live.**
-> Production carries 0 floating datetimes and 0 unresolved timezones. Google rewrites every timed
-> event once on its next poll — UIDs are unchanged, so nothing orphans or duplicates.
+> Production carries 0 floating datetimes and 0 unresolved timezones.
+> **Known gap (2026-08-04): a rendering-only fix does not reach existing subscribers.** The claim
+> that "Google rewrites every timed event once on its next poll" is unverified and was contradicted
+> in practice — see the 2026-08-04 entry. Existing subscribers had to delete and re-add.
 > Append one report per completed phase (format below). Never rewrite an earlier
 > phase report; later corrections are new dated entries.
 
@@ -731,3 +733,73 @@ filters before concluding a count change is a regression.
 **Production data was cleaner than local dev:** the destination that geocodes ambiguously
 ("Washington" → Washington DC) exists only in the local database. Production says `"Seattle, WA"`
 and resolved correctly with no override needed.
+
+## Post-deploy correction — 2026-08-04
+
+**Status:** complete-with-deviations — the feed is correct; propagation to existing subscribers is not.
+
+**What happened.** The day after Phase 5 went live, a subscriber's Google Calendar still showed
+the pre-fix times: the Mariners game (13:10 Seattle) rendered at 8:10am CT, which is exactly
+`13:10` read as UTC — the floating-datetime symptom Phase 5 removed. The feed itself was correct
+throughout. Fetched from the public URL, the event served:
+
+```
+DTSTART:20260809T201000Z          -> 1:10pm PDT = 3:10pm CT, correct
+X-ZO-TZ:America/Los_Angeles
+```
+
+All 26 events in that trip window decoded correctly, including both flights with each end
+resolved separately (`America/Chicago/America/Los_Angeles` out, swapped on the return).
+
+**Cause.** Not established with certainty; two candidates survived, and the fix applied covers
+both. Ruled out: token rotation (Chris confirmed the subscribed URL matched the live token), a
+deleted-and-recreated feed row (`calendar_feeds` does not exist in the 2026-08-03 backup, so the
+current row is the only one that has ever existed), and the superseded OAuth push-sync path
+(never started, so nothing else has ever written to that calendar).
+
+Remaining candidates:
+
+1. Google had not re-polled since before the 20:40 CDT deploy. Its external-ICS interval is
+   commonly 8-24h and unpredictable.
+2. **Google polled and declined to update.** `DTSTAMP`/`LAST-MODIFIED` come from each row's
+   `updated_at`, and Phase 5 changed rendering without touching any row — deliberately ("no event
+   churned"). The Mariners row's `updated_at` is still `2026-05-24T16:49:06Z`, so its
+   `LAST-MODIFIED` is byte-identical to Google's cached copy. The feed emits **no `SEQUENCE`**.
+   Every change-detection field therefore says "unchanged" while `DTSTART` differs.
+
+Candidate 2 is the one with consequences: waiting would never fix it, and the next rendering-only
+change strands every subscriber the same way. The byte-stability property that makes the feed
+diffable is precisely what makes such a fix invisible to a change-detecting consumer. That
+tension was not previously recorded anywhere.
+
+**Resolution.** Delete and re-add the subscription. A fresh calendar imports from scratch and
+fixes either cause. Confirmed working: times now match.
+
+**Verification evidence closed.** The Phase 4 open item — `last_fetched_user_agent` showing a real
+subscriber rather than a localhost curl — is now **confirmed**: `2026-08-04T14:29:10.051Z |
+Google-Calendar-Importer`, logged seconds after the re-add.
+
+**Two corrections to earlier docs, both made today:**
+
+- Google's importer sends the **bare** string `Google-Calendar-Importer`. `RUNBOOK.md` §12a and
+  `04-deploy-cloudflare-and-docs.md` both claimed `Mozilla/5.0 (compatible; Google-Calendar-Importer)`.
+  That matters because it is the value a Cloudflare WAF skip-rule would match on. Both corrected,
+  and both now recommend a `contains` match rather than an exact one.
+- `last_fetched_at`/`last_fetched_user_agent` is a single-valued column and is the *only* record of
+  who fetched. During this investigation it was overwritten twice by diagnostic curls, once with a
+  deliberately spoofed `Google-Calendar-Importer` UA, which briefly made a test request
+  indistinguishable from a real subscriber. `RUNBOOK.md` §12c now warns against that. A
+  `calendar_feed_fetches` append-only log would have answered the whole question in one query, and
+  is the obvious follow-up.
+
+**Known gaps / follow-ups:**
+
+- Whether Google honours `SEQUENCE`/`LAST-MODIFIED` for subscribed feeds is still unmeasured.
+  Sampling `last_fetched_at` over 24h would establish the real poll interval and settle it.
+- No `SEQUENCE` fix has been written. Shape if needed: a global feed-format revision added to a
+  per-row counter, so a rendering change forces a re-read without touching any row's `updated_at`.
+- Rotating a token still gives no warning that it silently and permanently breaks every existing
+  subscription.
+- The Phase 5 note "the ambiguous-destination trip exists only in local dev" **still holds**:
+  production's trip is `Seattle, WA` with `resolved_timezone = America/Los_Angeles` and no
+  override. The `destination = "Washington"` row with a manual override is local-only.
